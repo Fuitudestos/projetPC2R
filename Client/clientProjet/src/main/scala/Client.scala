@@ -9,7 +9,7 @@ object monClient extends SimpleSwingApplication
     {
         title = "Simple Client"
 
-        val socket = new Socket(InetAddress.getByName("localhost"), 17000)
+        val socket = new Socket(InetAddress.getByName("localhost"), 15000)
         var in = new BufferedSource(socket.getInputStream).getLines
         val out = new PrintStream(socket.getOutputStream)
         println("Client initialized:")

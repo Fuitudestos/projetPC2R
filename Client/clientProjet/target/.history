@@ -2,3 +2,7 @@
 run
 exit
 run
+sbt
+run
+RUN
+run
