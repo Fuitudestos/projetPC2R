@@ -6,3 +6,9 @@ sbt
 run
 RUN
 run
+quit
+exit
+run
+quit
+exit
+run

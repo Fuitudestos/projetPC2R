@@ -9,38 +9,29 @@ object monClient extends SimpleSwingApplication
     {
         title = "Simple Client"
 
-        val socket = new Socket(InetAddress.getByName("localhost"), 15000)
+        val socket = new Socket(InetAddress.getByName("localhost"), 16000)
         var in = new BufferedSource(socket.getInputStream).getLines
         val out = new PrintStream(socket.getOutputStream)
-        println("Client initialized:")
 
-        contents = new BorderPanel
+        val gridPanel = new GridPanel(4,4)
         {
-           add(new FlowPanel
-              {
-                  contents += new Button(new Action("Send")
-                  {
-                     def apply
-                     {
-                       out.println("Hello!")
-                       out.flush
-                     }
-                  })
-
-                  contents += new Button(new Action("Close")
-                  {
-                     def apply
-                     {
-                       out.println("Disconnect")
-                       out.flush
-                       socket.close
-                       quit
-                     }
-                  })
-              }, BorderPanel.Position.Center)
+            println("Coucou")
+            val grille = in.next
+            for(i <- grille)
+            {
+                contents += new Label
+                {
+                    text = i+""
+                    font = new Font("Ariel", java.awt.Font.ITALIC, 50)
+                }
+            }
         }
 
-        pack
-        visible = true
+        contents = new FlowPanel
+        {
+            contents += gridPanel
+        }
+
+        size = new Dimension(500, 500)
     }
 }

@@ -27,13 +27,18 @@
 void* boggle(void *arg)
 {
     printf("Coucou c'est moi le jeu\n");
-    dataB* myData = (dataB*) arg;
+    data* myData = (data*) arg;
 
     pthread_mutex_lock(myData->mutex);
-    printf("Suspendu\n");
     pthread_cond_wait(myData->cond, myData->mutex);
-    printf("Reprise\n");
+    *myData->phaseDeJeu = 0;
+    myData->grille = tirageGrille(myData->grille);
+    printf("tirageGrille\n");
     pthread_mutex_unlock(myData->mutex);
+
+    while (1) {
+        /* code */
+    };
 
     return 0;
 }
@@ -43,10 +48,22 @@ void* traiteClient(void *arg)
     data* myData = (data*) arg;
 
     pthread_mutex_lock(myData->mutex);
-    printf("Je vasi te liberer\n");
     pthread_cond_signal(myData->cond);
-    printf("Tu est libre\n");
     pthread_mutex_unlock(myData->mutex);
+
+    sleep(1);
+
+    printf("LectureGrille\n");
+    if(*myData->phaseDeJeu == 0)
+    {
+        int i;
+        for(i = 0; i < 16; i++)
+        {
+            write(myData->sock, &myData->grille[i], sizeof(myData->grille[i]));
+        }
+        write(myData->sock, "\0", sizeof(char));
+        printf("EnvoiGrille\n");
+    }
 
     return 0;
 }
@@ -55,8 +72,8 @@ void* accepteClient(void *arg)
 {
     printf("Coucou c'est moi la socket\n");
     data* serv = (data*) arg;
-    //while(1)
-    //{
+    while(1)
+    {
         data* clientData = malloc(sizeof(data));
         socklen_t addrSize;
         addrSize = sizeof(clientData->addr);
@@ -64,19 +81,30 @@ void* accepteClient(void *arg)
         clientData->grille = serv->grille;
         clientData->cond = serv->cond;
         clientData->mutex = serv->mutex;
+        clientData->phaseDeJeu = serv->phaseDeJeu;
         pthread_t pidT;
         pthread_create(&pidT, NULL, traiteClient, clientData);
-    //}
+
+        pthread_mutex_lock(serv->mutex);
+        if(serv->nbJoueur == serv->nbJoueurMax)
+        {
+            data** tmp = malloc(sizeof(data) * serv->nbJoueurMax * 2);
+            tmp = memcpy(tmp, serv->joueurs, serv->nbJoueurMax);
+            free(serv->joueurs);
+            serv->joueurs = tmp;
+            serv->nbJoueurMax = serv->nbJoueurMax * 2;
+        }
+
+        serv->joueurs[serv->nbJoueur] = clientData;
+        serv->nbJoueur++;
+        pthread_mutex_unlock(serv->mutex);
+    }
 
     return 0;
 }
 
 int main(int argc, char const *argv[])
 {
-    srand(time(NULL));
-    //clock_t temps0;
-    char* grille = malloc(sizeof(char) * 16);
-
     if(argc < 2)
     {
         perror("Pas assez d'arguments");
@@ -110,26 +138,32 @@ int main(int argc, char const *argv[])
         exit(errno);
     }
 
+    srand(time(NULL));
+    //clock_t temps0;
+    int* phaseDeJeu = malloc(sizeof(int));
+    char* grille = malloc(sizeof(char) * 16);
+    data** joueurs = malloc(sizeof(data) * 10);
+
+
     pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
     pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
     pthread_t pidB;
-    dataB* dataJeu = malloc(sizeof(dataB));
-    dataJeu->grille = grille;
-    dataJeu->nbJoueur = 0;
-    dataJeu->cond = &cond;
-    dataJeu->mutex = &mutex;
-
-    printf("Coucou c'est moi le main\n");
-    pthread_create(&pidB, NULL, boggle, dataJeu);
-
-    pthread_t pidAC;
     data* myData = malloc(sizeof(data));
-    myData->sock = mySocket;
-    myData->addr = serv;
     myData->grille = grille;
+    myData->nbJoueur = 0;
+    myData->nbJoueurMax = 10;
+    myData->joueurs = joueurs;
     myData->cond = &cond;
     myData->mutex = &mutex;
+    myData->phaseDeJeu = phaseDeJeu;
+
+    printf("Coucou c'est moi le main\n");
+    pthread_create(&pidB, NULL, boggle, myData);
+
+    pthread_t pidAC;
+    myData->sock = mySocket;
+    myData->addr = serv;
 
     pthread_create(&pidAC, NULL, accepteClient, myData);
 
