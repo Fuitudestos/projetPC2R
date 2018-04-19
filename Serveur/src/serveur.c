@@ -28,7 +28,7 @@ void* boggle(void *arg)
 {
     printf("Coucou c'est moi le jeu\n");
     data* myData = (data*) arg;
-
+    int timer;
     pthread_mutex_lock(myData->mutex);
     pthread_cond_wait(myData->cond, myData->mutex);
     *myData->phaseDeJeu = 0;
@@ -36,9 +36,28 @@ void* boggle(void *arg)
     printf("tirageGrille\n");
     pthread_mutex_unlock(myData->mutex);
 
-    while (1) {
-        /* code */
-    };
+    while (1)
+    {
+        for(timer = 20; timer >= 0; timer--)
+        {
+            printf("%d : ", timer);
+            pthread_mutex_lock(myData->mutex);
+            *myData->phaseDeJeu = 1;
+            *myData->timer = timer;
+            pthread_cond_broadcast(myData->cond);
+            pthread_mutex_unlock(myData->mutex);
+            sleep(1);
+        }
+
+        pthread_mutex_lock(myData->mutex);
+        *myData->phaseDeJeu = 0;
+        myData->grille = tirageGrille(myData->grille);
+        printf("tirageGrille\n");
+        pthread_cond_broadcast(myData->cond);
+        pthread_mutex_unlock(myData->mutex);
+
+        sleep(10);
+    }
 
     return 0;
 }
@@ -46,6 +65,9 @@ void* boggle(void *arg)
 void* traiteClient(void *arg)
 {
     data* myData = (data*) arg;
+    char* tmp = malloc(sizeof(char) * 12 * 2);
+    int nbSeconde;
+    int nbMinute;
 
     pthread_mutex_lock(myData->mutex);
     pthread_cond_signal(myData->cond);
@@ -53,16 +75,45 @@ void* traiteClient(void *arg)
 
     sleep(1);
 
-    printf("LectureGrille\n");
-    if(*myData->phaseDeJeu == 0)
+    while(1)
     {
+        printf("LectureGrille\n");
         int i;
+        write(myData->sock, "newGrille\n", sizeof(char) * 10);
         for(i = 0; i < 16; i++)
         {
             write(myData->sock, &myData->grille[i], sizeof(myData->grille[i]));
         }
-        write(myData->sock, "\0", sizeof(char));
+        write(myData->sock, "\n", sizeof(char));
         printf("EnvoiGrille\n");
+
+        if(*myData->phaseDeJeu == 0)
+        {
+            pthread_mutex_lock(myData->mutex);
+            pthread_cond_wait(myData->cond, myData->mutex);
+            pthread_mutex_unlock(myData->mutex);
+        }
+
+        while(*myData->phaseDeJeu == 1)
+        {
+
+            nbSeconde = *myData->timer;
+            printf("%d\n", nbSeconde);
+            nbMinute = nbSeconde/60;
+            nbSeconde = nbSeconde%60;
+
+            sprintf(tmp, "%d : %d", nbMinute, nbSeconde);
+
+            write(myData->sock, "newTimer\n", sizeof(char) * 9);
+            write(myData->sock, tmp, sizeof(tmp));
+            write(myData->sock, "\n", sizeof(char));
+
+            pthread_mutex_lock(myData->mutex);
+            pthread_cond_wait(myData->cond, myData->mutex);
+            pthread_mutex_unlock(myData->mutex);
+
+
+        }
     }
 
     return 0;
@@ -82,6 +133,7 @@ void* accepteClient(void *arg)
         clientData->cond = serv->cond;
         clientData->mutex = serv->mutex;
         clientData->phaseDeJeu = serv->phaseDeJeu;
+        clientData->timer = serv->timer;
         pthread_t pidT;
         pthread_create(&pidT, NULL, traiteClient, clientData);
 
@@ -141,6 +193,7 @@ int main(int argc, char const *argv[])
     srand(time(NULL));
     //clock_t temps0;
     int* phaseDeJeu = malloc(sizeof(int));
+    int* timer = malloc(sizeof(int));
     char* grille = malloc(sizeof(char) * 16);
     data** joueurs = malloc(sizeof(data) * 10);
 
@@ -157,6 +210,7 @@ int main(int argc, char const *argv[])
     myData->cond = &cond;
     myData->mutex = &mutex;
     myData->phaseDeJeu = phaseDeJeu;
+    myData->timer = timer;
 
     printf("Coucou c'est moi le main\n");
     pthread_create(&pidB, NULL, boggle, myData);

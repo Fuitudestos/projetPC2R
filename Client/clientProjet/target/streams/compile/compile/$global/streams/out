@@ -1,4 +1,7 @@
-[0m[[0m[31merror[0m] [0m[0m/home/charton/Bureau/projetPC2R/Client/clientProjet/src/main/scala/Client.scala:19:29: value readLine is not a member of scala.io.BufferedSource[0m
-[0m[[0m[31merror[0m] [0m[0m            val grille = in.readLine[0m
-[0m[[0m[31merror[0m] [0m[0m                            ^[0m
-[0m[[0m[31merror[0m] [0m[0mone error found[0m
+[0m[[0m[31merror[0m] [0m[0m/home/charton/Bureau/projetPC2R/Client/clientProjet/src/main/scala/Main.scala:46:33: value / is not a member of String[0m
+[0m[[0m[31merror[0m] [0m[0m        val nbMinute = nbSeconde/60[0m
+[0m[[0m[31merror[0m] [0m[0m                                ^[0m
+[0m[[0m[31merror[0m] [0m[0m/home/charton/Bureau/projetPC2R/Client/clientProjet/src/main/scala/Main.scala:47:30: value % is not a member of String[0m
+[0m[[0m[31merror[0m] [0m[0m        nbSeconde = nbSeconde%60[0m
+[0m[[0m[31merror[0m] [0m[0m                             ^[0m
+[0m[[0m[31merror[0m] [0m[0mtwo errors found[0m

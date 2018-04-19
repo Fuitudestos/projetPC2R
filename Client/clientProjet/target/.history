@@ -12,3 +12,17 @@ run
 quit
 exit
 run
+exit
+assembly
+quit
+exit
+assembly
+sbt package
+exit
+sbt compile
+compile
+assembly
+run
+compile
+run
+exit
