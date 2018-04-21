@@ -30,17 +30,16 @@ void* boggle(void *arg)
     data* myData = (data*) arg;
     int timer;
     pthread_mutex_lock(myData->mutex);
-    pthread_cond_wait(myData->cond, myData->mutex);
     *myData->phaseDeJeu = 0;
     myData->grille = tirageGrille(myData->grille);
     printf("tirageGrille\n");
+    pthread_cond_wait(myData->cond, myData->mutex);
     pthread_mutex_unlock(myData->mutex);
 
     while (1)
     {
         for(timer = 20; timer >= 0; timer--)
         {
-            printf("%d : ", timer);
             pthread_mutex_lock(myData->mutex);
             *myData->phaseDeJeu = 1;
             *myData->timer = timer;
@@ -65,15 +64,13 @@ void* boggle(void *arg)
 void* traiteClient(void *arg)
 {
     data* myData = (data*) arg;
-    char* tmp = malloc(sizeof(char) * 12 * 2);
+    char* buffer = malloc(sizeof(char) * 256);
     int nbSeconde;
     int nbMinute;
 
     pthread_mutex_lock(myData->mutex);
     pthread_cond_signal(myData->cond);
     pthread_mutex_unlock(myData->mutex);
-
-    sleep(1);
 
     while(1)
     {
@@ -87,32 +84,37 @@ void* traiteClient(void *arg)
         write(myData->sock, "\n", sizeof(char));
         printf("EnvoiGrille\n");
 
-        if(*myData->phaseDeJeu == 0)
-        {
-            pthread_mutex_lock(myData->mutex);
-            pthread_cond_wait(myData->cond, myData->mutex);
-            pthread_mutex_unlock(myData->mutex);
-        }
-
         while(*myData->phaseDeJeu == 1)
         {
-
-            nbSeconde = *myData->timer;
-            printf("%d\n", nbSeconde);
-            nbMinute = nbSeconde/60;
-            nbSeconde = nbSeconde%60;
-
-            sprintf(tmp, "%d : %d", nbMinute, nbSeconde);
-
-            write(myData->sock, "newTimer\n", sizeof(char) * 9);
-            write(myData->sock, tmp, sizeof(tmp));
-            write(myData->sock, "\n", sizeof(char));
-
             pthread_mutex_lock(myData->mutex);
             pthread_cond_wait(myData->cond, myData->mutex);
             pthread_mutex_unlock(myData->mutex);
 
+            nbSeconde = *myData->timer;
+            nbMinute = nbSeconde/60;
+            nbSeconde = nbSeconde%60;
+            buffer = memset(buffer, 0, 256);
+            sprintf(buffer, "%d : %d", nbMinute, nbSeconde);
 
+            write(myData->sock, "newTimer\n", sizeof(char) * 9);
+            write(myData->sock, buffer, sizeof(buffer));
+            write(myData->sock, "\n", sizeof(char));
+
+            buffer = memset(buffer, 0, 256);
+            if(fcntl(myData->sock, F_SETFL, O_NONBLOCK) != -1)
+            {
+                read(myData->sock, buffer, sizeof(buffer));
+                printf("%s", buffer);
+            }
+        }
+
+        while(*myData->phaseDeJeu == 0)
+        {
+            buffer = memset(buffer, 0, 256);
+            if(fcntl(myData->sock, F_SETFL, O_NONBLOCK) != -1)
+            {
+                read(myData->sock, buffer, sizeof(buffer));
+            }
         }
     }
 

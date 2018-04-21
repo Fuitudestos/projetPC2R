@@ -2,13 +2,17 @@ import java.net._
 import java.io._
 import scala.io._
 import swing._
+import scala.swing.event.Key
+import scala.swing.event.KeyPressed
+import scala.swing.BorderPanel.Position._
 
-class UI extends MainFrame
+class UI(val out: PrintStream) extends MainFrame
 {
     title = "Simple Client"
 
     var grille = List[Label]()
-    var timer = new Label {font = new Font("Ariel", java.awt.Font.ITALIC, 50)}
+    val timer = new Label {font = new Font("Ariel", java.awt.Font.ITALIC, 50)}
+    val textfield = new TextField("Input")
 
     for(i <- 0 to 15)
     {
@@ -23,10 +27,18 @@ class UI extends MainFrame
         }
     }
 
-    contents = new FlowPanel
+    contents = new BorderPanel
     {
-        contents += timer
-        contents += gridPanel
+        layout(timer) = West
+        layout(gridPanel) = Center
+        layout(textfield) = South
+    }
+
+    listenTo(textfield.keys)
+
+    reactions +=
+    {
+        case KeyPressed(_, Key.Enter, _, _) => out.println(textfield.text)
     }
 
     size = new Dimension(500, 500)
@@ -51,11 +63,11 @@ object MainApp
 {
     def main(args: Array[String]): Unit =
     {
-        val socket = new Socket(InetAddress.getByName("localhost"), 16000)
+        val socket = new Socket(InetAddress.getByName("localhost"), 15000)
         var in = new BufferedSource(socket.getInputStream).getLines
         val out = new PrintStream(socket.getOutputStream)
 
-        val ui = new UI
+        val ui = new UI(out)
         ui.visible = true
 
         var tmp = in.next
