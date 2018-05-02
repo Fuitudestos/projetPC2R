@@ -157,6 +157,50 @@ void* accepteClient(void *arg)
     return 0;
 }
 
+void enleveAccent(FILE* dico)
+{
+    char tmp;
+    char* monAccent = malloc(sizeof(char) * 2);
+
+    FILE* newDico = fopen("../ressources/sansaccent.txt", "w");
+
+    tmp = fgetc(dico);
+    while(feof(dico) == 0)
+    {
+        while(tmp != '|')
+        {
+            if(tmp < 0)
+            {
+                monAccent[0] = tmp;
+                monAccent[1] = fgetc(dico);
+
+                if(strcmp(monAccent, "ü") == 0 || strcmp(monAccent, "û") == 0 || strcmp(monAccent, "ù") == 0){fputc('u', newDico);}
+                else if(strcmp(monAccent, "é") == 0 || strcmp(monAccent, "ê") == 0 || strcmp(monAccent, "ë") == 0 || strcmp(monAccent, "è") == 0){fputc('e', newDico);}
+                else if(strcmp(monAccent, "ï") == 0 || strcmp(monAccent, "î") == 0){fputc('i', newDico);}
+                else if(strcmp(monAccent, "ç") == 0){fputc('c', newDico);}
+                else if(strcmp(monAccent, "ô") == 0 || strcmp(monAccent, "ö") == 0){fputc('o', newDico);}
+                else if(strcmp(monAccent, "â") == 0 || strcmp(monAccent, "ä") == 0 || strcmp(monAccent, "à") == 0){fputc('a', newDico);}
+            }
+            else
+            {
+                fputc(tmp, newDico);
+            }
+
+            tmp = fgetc(dico);
+        }
+
+        while(tmp != '\n')
+        {
+            tmp = fgetc(dico);
+        }
+
+        while(tmp == '\n')
+        {
+            tmp = fgetc(dico);
+        }
+    }
+}
+
 int main(int argc, char const *argv[])
 {
     if(argc < 2)
@@ -222,6 +266,15 @@ int main(int argc, char const *argv[])
     myData->addr = serv;
 
     pthread_create(&pidAC, NULL, accepteClient, myData);
+
+    FILE* dico = fopen("../ressources/sansaccent.txt", "r");
+
+    if(dico == NULL)
+    {
+        dico = fopen("../ressources/GLAFF-1.2.2/glaff-1.2.2.txt", "r");
+        enleveAccent(dico);
+        printf("fini\n");
+    }
 
     pthread_join(pidB, NULL);
 
