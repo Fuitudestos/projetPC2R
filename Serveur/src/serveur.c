@@ -24,6 +24,8 @@
 #include <serveur.h>
 #include <boggle.h>
 
+#define TAILLEBUFFER 256
+
 void* boggle(void *arg)
 {
     printf("Coucou c'est moi le jeu\n");
@@ -64,7 +66,7 @@ void* boggle(void *arg)
 void* traiteClient(void *arg)
 {
     data* myData = (data*) arg;
-    char* buffer = malloc(sizeof(char) * 256);
+    char* buffer = malloc(sizeof(char) * TAILLEBUFFER);
     int nbSeconde;
     int nbMinute;
 
@@ -93,14 +95,14 @@ void* traiteClient(void *arg)
             nbSeconde = *myData->timer;
             nbMinute = nbSeconde/60;
             nbSeconde = nbSeconde%60;
-            buffer = memset(buffer, 0, 256);
+            buffer = memset(buffer, 0, TAILLEBUFFER);
             sprintf(buffer, "%d : %d", nbMinute, nbSeconde);
 
             write(myData->sock, "newTimer\n", sizeof(char) * 9);
             write(myData->sock, buffer, sizeof(buffer));
             write(myData->sock, "\n", sizeof(char));
 
-            buffer = memset(buffer, 0, 256);
+            buffer = memset(buffer, 0, TAILLEBUFFER);
             if(fcntl(myData->sock, F_SETFL, O_NONBLOCK) != -1)
             {
                 read(myData->sock, buffer, sizeof(buffer));
@@ -110,7 +112,7 @@ void* traiteClient(void *arg)
 
         while(*myData->phaseDeJeu == 0)
         {
-            buffer = memset(buffer, 0, 256);
+            buffer = memset(buffer, 0, TAILLEBUFFER);
             if(fcntl(myData->sock, F_SETFL, O_NONBLOCK) != -1)
             {
                 read(myData->sock, buffer, sizeof(buffer));
@@ -165,6 +167,7 @@ void enleveAccent(FILE* dico)
     FILE* newDico = fopen("../ressources/sansaccent.txt", "w");
 
     tmp = fgetc(dico);
+
     while(feof(dico) == 0)
     {
         while(tmp != '|')
@@ -194,11 +197,43 @@ void enleveAccent(FILE* dico)
             tmp = fgetc(dico);
         }
 
+        fputc(tmp, newDico);
+
         while(tmp == '\n')
         {
             tmp = fgetc(dico);
         }
     }
+}
+
+int rechercheDansDico(char* mot, FILE* dico)
+{
+    int i = 0;
+    int index = 0;
+    char tmp;
+
+    while(feof(dico) == 0)
+    {
+        tmp = fgetc(dico);
+
+        while(mot[index] == tmp)
+        {
+            tmp = fgetc(dico);
+            if(tmp == '\n' && mot[index + 1] == 0) return 1;
+            else if(tmp == '\n' || mot[index + 1] == 0) break;
+            index++;
+        }
+
+        while(tmp != '\n')
+        {
+            tmp = fgetc(dico);
+            if(feof(dico) != 0) return 0;
+        }
+        printf("%d\n", i);
+        i++;
+    }
+
+    return 0;
 }
 
 int main(int argc, char const *argv[])
@@ -237,7 +272,6 @@ int main(int argc, char const *argv[])
     }
 
     srand(time(NULL));
-    //clock_t temps0;
     int* phaseDeJeu = malloc(sizeof(int));
     int* timer = malloc(sizeof(int));
     char* grille = malloc(sizeof(char) * 16);
@@ -275,6 +309,10 @@ int main(int argc, char const *argv[])
         enleveAccent(dico);
         printf("fini\n");
     }
+
+    dico = fopen("../ressources/sansaccent.txt", "r");
+
+    printf("%d\n", rechercheDansDico("cyhjbkjgoczhpiefhkoazjsqbv", dico));
 
     pthread_join(pidB, NULL);
 
