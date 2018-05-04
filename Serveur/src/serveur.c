@@ -208,7 +208,6 @@ void enleveAccent(FILE* dico)
 
 int rechercheDansDico(char* mot, FILE* dico)
 {
-    int i = 0;
     int index = 0;
     char tmp;
 
@@ -229,8 +228,6 @@ int rechercheDansDico(char* mot, FILE* dico)
             tmp = fgetc(dico);
             if(feof(dico) != 0) return 0;
         }
-        printf("%d\n", i);
-        i++;
     }
 
     return 0;
@@ -311,8 +308,6 @@ int main(int argc, char const *argv[])
     }
 
     dico = fopen("../ressources/sansaccent.txt", "r");
-
-    printf("%d\n", rechercheDansDico("cyhjbkjgoczhpiefhkoazjsqbv", dico));
 
     pthread_join(pidB, NULL);
 

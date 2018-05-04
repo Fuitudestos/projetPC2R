@@ -63,7 +63,17 @@ object MainApp
 {
     def main(args: Array[String]): Unit =
     {
-        val socket = new Socket(InetAddress.getByName("localhost"), 15000)
+        print("Veuillez entrer votre nom d'utilisateur : ")
+        val pseudo = scala.io.StdIn.readLine()
+
+        print("Veuillez entrer le nom/adresse du serveur : ")
+        val serveur = scala.io.StdIn.readLine()
+
+        print("Veuillez entrer le port du serveur : ")
+        val port = scala.io.StdIn.readInt()
+
+
+        val socket = new Socket(InetAddress.getByName(serveur), port)
         var in = new BufferedSource(socket.getInputStream).getLines
         val out = new PrintStream(socket.getOutputStream)
 
