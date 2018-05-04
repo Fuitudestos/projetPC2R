@@ -4,6 +4,8 @@ struct data
     int sock;
     int nbJoueur;
     int nbJoueurMax;
+    int nbSession;
+    int nbMinute;
     data** joueurs;
     struct sockaddr_in addr;
     char* grille;
@@ -12,6 +14,8 @@ struct data
 
     int* timer;
     int* phaseDeJeu;
+
+    FILE* dico;
 };
 
 void* accepteClient(void* arg);

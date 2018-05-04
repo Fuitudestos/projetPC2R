@@ -26,6 +26,82 @@
 
 #define TAILLEBUFFER 256
 
+void enleveAccent(FILE* dico)
+{
+    char tmp;
+    char* monAccent = malloc(sizeof(char) * 2);
+
+    FILE* newDico = fopen("../ressources/sansaccent.txt", "w");
+
+    tmp = fgetc(dico);
+
+    while(feof(dico) == 0)
+    {
+        while(tmp != '|')
+        {
+            if(tmp < 0)
+            {
+                monAccent[0] = tmp;
+                monAccent[1] = fgetc(dico);
+
+                if(strcmp(monAccent, "ü") == 0 || strcmp(monAccent, "û") == 0 || strcmp(monAccent, "ù") == 0){fputc('u', newDico);}
+                else if(strcmp(monAccent, "é") == 0 || strcmp(monAccent, "ê") == 0 || strcmp(monAccent, "ë") == 0 || strcmp(monAccent, "è") == 0){fputc('e', newDico);}
+                else if(strcmp(monAccent, "ï") == 0 || strcmp(monAccent, "î") == 0){fputc('i', newDico);}
+                else if(strcmp(monAccent, "ç") == 0){fputc('c', newDico);}
+                else if(strcmp(monAccent, "ô") == 0 || strcmp(monAccent, "ö") == 0){fputc('o', newDico);}
+                else if(strcmp(monAccent, "â") == 0 || strcmp(monAccent, "ä") == 0 || strcmp(monAccent, "à") == 0){fputc('a', newDico);}
+            }
+            else
+            {
+                fputc(tmp, newDico);
+            }
+
+            tmp = fgetc(dico);
+        }
+
+        while(tmp != '\n')
+        {
+            tmp = fgetc(dico);
+        }
+
+        fputc(tmp, newDico);
+
+        while(tmp == '\n')
+        {
+            tmp = fgetc(dico);
+        }
+    }
+
+    fclose(newDico);
+}
+
+int rechercheDansDico(char* mot, FILE* dico)
+{
+    int index = 0;
+    char tmp;
+
+    while(feof(dico) == 0)
+    {
+        tmp = fgetc(dico);
+
+        while(mot[index] == tmp)
+        {
+            tmp = fgetc(dico);
+            if(tmp == '\n' && mot[index + 1] == 0) return 1;
+            else if(tmp == '\n' || mot[index + 1] == 0) break;
+            index++;
+        }
+
+        while(tmp != '\n')
+        {
+            tmp = fgetc(dico);
+            if(feof(dico) != 0) return 0;
+        }
+    }
+
+    return 0;
+}
+
 void* boggle(void *arg)
 {
     printf("Coucou c'est moi le jeu\n");
@@ -103,6 +179,7 @@ void* traiteClient(void *arg)
             write(myData->sock, "\n", sizeof(char));
 
             buffer = memset(buffer, 0, TAILLEBUFFER);
+            
             if(fcntl(myData->sock, F_SETFL, O_NONBLOCK) != -1)
             {
                 read(myData->sock, buffer, sizeof(buffer));
@@ -159,89 +236,41 @@ void* accepteClient(void *arg)
     return 0;
 }
 
-void enleveAccent(FILE* dico)
+int main(int argc, char * const argv[])
 {
-    char tmp;
-    char* monAccent = malloc(sizeof(char) * 2);
+    int opt;
+    int nbSession = 5;
+    int nbMinute = 5;
+    int port = 2018;
+    char* pathDico = NULL;
 
-    FILE* newDico = fopen("../ressources/sansaccent.txt", "w");
-
-    tmp = fgetc(dico);
-
-    while(feof(dico) == 0)
+    while((opt = getopt(argc, argv, "s:t:p:d:")) != -1)
     {
-        while(tmp != '|')
+        switch(opt)
         {
-            if(tmp < 0)
-            {
-                monAccent[0] = tmp;
-                monAccent[1] = fgetc(dico);
-
-                if(strcmp(monAccent, "ü") == 0 || strcmp(monAccent, "û") == 0 || strcmp(monAccent, "ù") == 0){fputc('u', newDico);}
-                else if(strcmp(monAccent, "é") == 0 || strcmp(monAccent, "ê") == 0 || strcmp(monAccent, "ë") == 0 || strcmp(monAccent, "è") == 0){fputc('e', newDico);}
-                else if(strcmp(monAccent, "ï") == 0 || strcmp(monAccent, "î") == 0){fputc('i', newDico);}
-                else if(strcmp(monAccent, "ç") == 0){fputc('c', newDico);}
-                else if(strcmp(monAccent, "ô") == 0 || strcmp(monAccent, "ö") == 0){fputc('o', newDico);}
-                else if(strcmp(monAccent, "â") == 0 || strcmp(monAccent, "ä") == 0 || strcmp(monAccent, "à") == 0){fputc('a', newDico);}
-            }
-            else
-            {
-                fputc(tmp, newDico);
-            }
-
-            tmp = fgetc(dico);
-        }
-
-        while(tmp != '\n')
-        {
-            tmp = fgetc(dico);
-        }
-
-        fputc(tmp, newDico);
-
-        while(tmp == '\n')
-        {
-            tmp = fgetc(dico);
-        }
-    }
-}
-
-int rechercheDansDico(char* mot, FILE* dico)
-{
-    int index = 0;
-    char tmp;
-
-    while(feof(dico) == 0)
-    {
-        tmp = fgetc(dico);
-
-        while(mot[index] == tmp)
-        {
-            tmp = fgetc(dico);
-            if(tmp == '\n' && mot[index + 1] == 0) return 1;
-            else if(tmp == '\n' || mot[index + 1] == 0) break;
-            index++;
-        }
-
-        while(tmp != '\n')
-        {
-            tmp = fgetc(dico);
-            if(feof(dico) != 0) return 0;
+            case 's':
+                nbSession = atoi(optarg);
+                break;
+            case 't':
+                nbMinute = atoi(optarg);
+                break;
+            case 'p':
+                port = atoi(optarg);
+                break;
+            case 'd':
+                pathDico = optarg;
+                break;
+            case '?':
+                printf("Argument d'option manquant, la valeur par defaut sera utiliser !\n");
         }
     }
 
-    return 0;
-}
-
-int main(int argc, char const *argv[])
-{
-    if(argc < 2)
+    if(pathDico != NULL)
     {
-        perror("Pas assez d'arguments");
-        exit(errno);
+        enleveAccent(fopen(pathDico, "r"));
     }
 
-    int PORT = atoi(argv[1]);
+    FILE* dico = fopen("../ressources/sansaccent.txt", "r");
 
     int mySocket = socket(AF_INET, SOCK_STREAM, 0);
     if(mySocket == -1)
@@ -253,7 +282,7 @@ int main(int argc, char const *argv[])
     struct sockaddr_in serv = { 0 };
     serv.sin_addr.s_addr = htonl(INADDR_ANY);
     serv.sin_family = AF_INET;
-    serv.sin_port = htons(PORT);
+    serv.sin_port = htons(port);
     memset(serv.sin_zero, '\0', sizeof(serv.sin_zero));
 
     if(bind(mySocket, (struct sockaddr*) &serv, sizeof(serv)) == -1)
@@ -288,6 +317,9 @@ int main(int argc, char const *argv[])
     myData->mutex = &mutex;
     myData->phaseDeJeu = phaseDeJeu;
     myData->timer = timer;
+    myData->nbSession = nbSession;
+    myData->nbMinute = nbMinute;
+    myData->dico = dico;
 
     printf("Coucou c'est moi le main\n");
     pthread_create(&pidB, NULL, boggle, myData);
@@ -297,17 +329,6 @@ int main(int argc, char const *argv[])
     myData->addr = serv;
 
     pthread_create(&pidAC, NULL, accepteClient, myData);
-
-    FILE* dico = fopen("../ressources/sansaccent.txt", "r");
-
-    if(dico == NULL)
-    {
-        dico = fopen("../ressources/GLAFF-1.2.2/glaff-1.2.2.txt", "r");
-        enleveAccent(dico);
-        printf("fini\n");
-    }
-
-    dico = fopen("../ressources/sansaccent.txt", "r");
 
     pthread_join(pidB, NULL);
 
