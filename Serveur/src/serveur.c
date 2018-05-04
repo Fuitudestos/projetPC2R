@@ -116,7 +116,7 @@ void* boggle(void *arg)
 
     while (1)
     {
-        for(timer = 20; timer >= 0; timer--)
+        for(timer = myData->nbMinute * 60; timer >= 0; timer--)
         {
             pthread_mutex_lock(myData->mutex);
             *myData->phaseDeJeu = 1;
@@ -145,12 +145,15 @@ void* traiteClient(void *arg)
     char* buffer = malloc(sizeof(char) * TAILLEBUFFER);
     int nbSeconde;
     int nbMinute;
+    int nbSession = 0;
 
     pthread_mutex_lock(myData->mutex);
     pthread_cond_signal(myData->cond);
     pthread_mutex_unlock(myData->mutex);
 
-    while(1)
+    fcntl(myData->sock, F_SETFL, O_NONBLOCK);
+
+    while(nbSession < myData->nbSession)
     {
         printf("LectureGrille\n");
         int i;
@@ -179,22 +182,16 @@ void* traiteClient(void *arg)
             write(myData->sock, "\n", sizeof(char));
 
             buffer = memset(buffer, 0, TAILLEBUFFER);
-            
-            if(fcntl(myData->sock, F_SETFL, O_NONBLOCK) != -1)
-            {
-                read(myData->sock, buffer, sizeof(buffer));
-                printf("%s", buffer);
-            }
+
+            read(myData->sock, buffer, sizeof(buffer));
+            printf("%s", buffer);
         }
 
         while(*myData->phaseDeJeu == 0)
         {
-            buffer = memset(buffer, 0, TAILLEBUFFER);
-            if(fcntl(myData->sock, F_SETFL, O_NONBLOCK) != -1)
-            {
-                read(myData->sock, buffer, sizeof(buffer));
-            }
+            read(myData->sock, buffer, sizeof(buffer));
         }
+        nbSession++;
     }
 
     return 0;
@@ -215,6 +212,9 @@ void* accepteClient(void *arg)
         clientData->mutex = serv->mutex;
         clientData->phaseDeJeu = serv->phaseDeJeu;
         clientData->timer = serv->timer;
+        clientData->dico = serv->dico;
+        clientData->nbSession = serv->nbSession;
+
         pthread_t pidT;
         pthread_create(&pidT, NULL, traiteClient, clientData);
 
@@ -240,7 +240,7 @@ int main(int argc, char * const argv[])
 {
     int opt;
     int nbSession = 5;
-    int nbMinute = 5;
+    int nbMinute = 1;
     int port = 2018;
     char* pathDico = NULL;
 
