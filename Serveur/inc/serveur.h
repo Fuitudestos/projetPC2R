@@ -9,6 +9,7 @@ struct dataClient
     int* phaseDeJeu;
 
     char* grille;
+    char* pseudo;
 
     pthread_cond_t* cond;
     pthread_mutex_t* mutex;

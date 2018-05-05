@@ -72,6 +72,7 @@ object MainApp
         print("Veuillez entrer le port du serveur : ")
         val port = scala.io.StdIn.readInt()
 
+        println(pseudo)
 
         val socket = new Socket(InetAddress.getByName(serveur), port)
         var in = new BufferedSource(socket.getInputStream).getLines
@@ -79,6 +80,8 @@ object MainApp
 
         val ui = new UI(out)
         ui.visible = true
+
+        out.println(pseudo)
 
         var tmp = in.next
 

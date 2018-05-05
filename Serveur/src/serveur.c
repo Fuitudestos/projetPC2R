@@ -115,6 +115,8 @@ void* boggle(void *arg)
     pthread_cond_wait(myData->cond, myData->mutex);
     pthread_mutex_unlock(myData->mutex);
 
+    printf("%s\n", myData->joueurs[0]->pseudo);
+
     while(nbSession < myData->nbSession)
     {
         for(timer = myData->nbMinute * 60; timer >= 0; timer--)
@@ -135,6 +137,7 @@ void* boggle(void *arg)
         pthread_mutex_unlock(myData->mutex);
 
         sleep(10);
+        nbSession++;
     }
 
     return 0;
@@ -143,10 +146,14 @@ void* boggle(void *arg)
 void* traiteClient(void *arg)
 {
     dataClient* myData = (dataClient*) arg;
+    myData->pseudo = malloc(sizeof(char) * TAILLEBUFFER);
     char* buffer = malloc(sizeof(char) * TAILLEBUFFER);
     int nbSeconde;
     int nbMinute;
     int nbSession = 0;
+
+    myData->pseudo = memset(myData->pseudo, 0, TAILLEBUFFER);
+    read(myData->sock, myData->pseudo, TAILLEBUFFER);
 
     pthread_mutex_lock(myData->mutex);
     pthread_cond_signal(myData->cond);
@@ -183,8 +190,8 @@ void* traiteClient(void *arg)
             write(myData->sock, "\n", sizeof(char));
 
             buffer = memset(buffer, 0, TAILLEBUFFER);
-
             read(myData->sock, buffer, sizeof(buffer));
+
             printf("%s", buffer);
         }
 
