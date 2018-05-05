@@ -105,8 +105,9 @@ int rechercheDansDico(char* mot, FILE* dico)
 void* boggle(void *arg)
 {
     printf("Coucou c'est moi le jeu\n");
-    data* myData = (data*) arg;
+    dataServ* myData = (dataServ*) arg;
     int timer;
+    int nbSession = 0;
     pthread_mutex_lock(myData->mutex);
     *myData->phaseDeJeu = 0;
     myData->grille = tirageGrille(myData->grille);
@@ -114,7 +115,7 @@ void* boggle(void *arg)
     pthread_cond_wait(myData->cond, myData->mutex);
     pthread_mutex_unlock(myData->mutex);
 
-    while (1)
+    while(nbSession < myData->nbSession)
     {
         for(timer = myData->nbMinute * 60; timer >= 0; timer--)
         {
@@ -141,7 +142,7 @@ void* boggle(void *arg)
 
 void* traiteClient(void *arg)
 {
-    data* myData = (data*) arg;
+    dataClient* myData = (dataClient*) arg;
     char* buffer = malloc(sizeof(char) * TAILLEBUFFER);
     int nbSeconde;
     int nbMinute;
@@ -200,10 +201,10 @@ void* traiteClient(void *arg)
 void* accepteClient(void *arg)
 {
     printf("Coucou c'est moi la socket\n");
-    data* serv = (data*) arg;
+    dataServ* serv = (dataServ*) arg;
     while(1)
     {
-        data* clientData = malloc(sizeof(data));
+        dataClient* clientData = malloc(sizeof(dataClient));
         socklen_t addrSize;
         addrSize = sizeof(clientData->addr);
         clientData->sock = accept(serv->sock, (struct sockaddr*)&(clientData->addr), &addrSize);
@@ -212,7 +213,6 @@ void* accepteClient(void *arg)
         clientData->mutex = serv->mutex;
         clientData->phaseDeJeu = serv->phaseDeJeu;
         clientData->timer = serv->timer;
-        clientData->dico = serv->dico;
         clientData->nbSession = serv->nbSession;
 
         pthread_t pidT;
@@ -221,7 +221,7 @@ void* accepteClient(void *arg)
         pthread_mutex_lock(serv->mutex);
         if(serv->nbJoueur == serv->nbJoueurMax)
         {
-            data** tmp = malloc(sizeof(data) * serv->nbJoueurMax * 2);
+            dataClient** tmp = malloc(sizeof(dataClient) * serv->nbJoueurMax * 2);
             tmp = memcpy(tmp, serv->joueurs, serv->nbJoueurMax);
             free(serv->joueurs);
             serv->joueurs = tmp;
@@ -301,14 +301,14 @@ int main(int argc, char * const argv[])
     int* phaseDeJeu = malloc(sizeof(int));
     int* timer = malloc(sizeof(int));
     char* grille = malloc(sizeof(char) * 16);
-    data** joueurs = malloc(sizeof(data) * 10);
+    dataClient** joueurs = malloc(sizeof(dataClient*) * 10);
 
 
     pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
     pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
     pthread_t pidB;
-    data* myData = malloc(sizeof(data));
+    dataServ* myData = malloc(sizeof(dataServ));
     myData->grille = grille;
     myData->nbJoueur = 0;
     myData->nbJoueurMax = 10;
