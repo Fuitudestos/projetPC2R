@@ -58,3 +58,6 @@ compile
 run
 compile
 run
+compile
+quit
+exit

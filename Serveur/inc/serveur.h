@@ -3,6 +3,7 @@ struct dataClient
 {
     int sock;
     int nbSession;
+    int valide;
     struct sockaddr_in addr;
 
     int* timer;
@@ -11,8 +12,10 @@ struct dataClient
     char* grille;
     char* pseudo;
 
-    pthread_cond_t* cond;
-    pthread_mutex_t* mutex;
+    pthread_cond_t* condServ;
+    pthread_cond_t* condClient;
+    pthread_mutex_t* mutexServ;
+    pthread_mutex_t* mutexClient;
 };
 
 typedef struct dataServ dataServ;

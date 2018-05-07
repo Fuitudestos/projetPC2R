@@ -102,12 +102,28 @@ int rechercheDansDico(char* mot, FILE* dico)
     return 0;
 }
 
+int recherchePseudo(dataClient** joueurs, int nbJoueur, char* pseudo)
+{
+    int i;
+
+    for(i = 0; i < nbJoueur; i++)
+    {
+        if(strcmp(pseudo, joueurs[i]->pseudo) == 0)
+        {
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
 void* boggle(void *arg)
 {
     printf("Coucou c'est moi le jeu\n");
     dataServ* myData = (dataServ*) arg;
     int timer;
     int nbSession = 0;
+    int nbJoueur = 0;
     pthread_mutex_lock(myData->mutex);
     *myData->phaseDeJeu = 0;
     myData->grille = tirageGrille(myData->grille);
@@ -115,12 +131,33 @@ void* boggle(void *arg)
     pthread_cond_wait(myData->cond, myData->mutex);
     pthread_mutex_unlock(myData->mutex);
 
-    printf("%s\n", myData->joueurs[0]->pseudo);
+    printf("%d : %d\n", myData->nbJoueur, nbJoueur);
 
     while(nbSession < myData->nbSession)
     {
         for(timer = myData->nbMinute * 60; timer >= 0; timer--)
         {
+            //printf("%s\n", myData->joueurs[nbJoueur]->pseudo);
+            if(myData->nbJoueur > nbJoueur)
+            {
+                if(recherchePseudo(myData->joueurs, nbJoueur, myData->joueurs[nbJoueur]->pseudo) == 0)
+                {
+                    printf("C'est Bon !\n");
+                    myData->joueurs[nbJoueur]->valide = 1;
+                    pthread_mutex_lock(myData->joueurs[nbJoueur]->mutexClient);
+                    pthread_cond_signal(myData->joueurs[nbJoueur]->condClient);
+                    pthread_mutex_unlock(myData->joueurs[nbJoueur]->mutexClient);
+                    nbJoueur++;
+                }
+                else
+                {
+                    printf("C'est pas Bon !\n");
+                    pthread_mutex_lock(myData->joueurs[nbJoueur]->mutexClient);
+                    pthread_cond_signal(myData->joueurs[nbJoueur]->condClient);
+                    pthread_mutex_unlock(myData->joueurs[nbJoueur]->mutexClient);
+                }
+            }
+
             pthread_mutex_lock(myData->mutex);
             *myData->phaseDeJeu = 1;
             *myData->timer = timer;
@@ -150,14 +187,32 @@ void* traiteClient(void *arg)
     char* buffer = malloc(sizeof(char) * TAILLEBUFFER);
     int nbSeconde;
     int nbMinute;
+    int nbRead;
     int nbSession = 0;
 
     myData->pseudo = memset(myData->pseudo, 0, TAILLEBUFFER);
     read(myData->sock, myData->pseudo, TAILLEBUFFER);
 
-    pthread_mutex_lock(myData->mutex);
-    pthread_cond_signal(myData->cond);
-    pthread_mutex_unlock(myData->mutex);
+    pthread_mutex_lock(myData->mutexServ);
+    pthread_cond_signal(myData->condServ);
+    pthread_mutex_unlock(myData->mutexServ);
+
+    pthread_mutex_lock(myData->mutexClient);
+    pthread_cond_wait(myData->condClient, myData->mutexClient);
+    pthread_mutex_unlock(myData->mutexClient);
+
+    while(myData->valide == 0)
+    {
+        write(myData->sock, "newPseudoRequired\n", sizeof(char) * 18);
+        nbRead = read(myData->sock, myData->pseudo, TAILLEBUFFER);
+
+        memset(&(myData->pseudo[nbRead]), 0, TAILLEBUFFER - nbRead);
+        printf("%s\n", myData->pseudo);
+
+        pthread_mutex_lock(myData->mutexClient);
+        pthread_cond_wait(myData->condClient, myData->mutexClient);
+        pthread_mutex_unlock(myData->mutexClient);
+    }
 
     fcntl(myData->sock, F_SETFL, O_NONBLOCK);
 
@@ -175,9 +230,9 @@ void* traiteClient(void *arg)
 
         while(*myData->phaseDeJeu == 1)
         {
-            pthread_mutex_lock(myData->mutex);
-            pthread_cond_wait(myData->cond, myData->mutex);
-            pthread_mutex_unlock(myData->mutex);
+            pthread_mutex_lock(myData->mutexServ);
+            pthread_cond_wait(myData->condServ, myData->mutexServ);
+            pthread_mutex_unlock(myData->mutexServ);
 
             nbSeconde = *myData->timer;
             nbMinute = nbSeconde/60;
@@ -216,11 +271,17 @@ void* accepteClient(void *arg)
         addrSize = sizeof(clientData->addr);
         clientData->sock = accept(serv->sock, (struct sockaddr*)&(clientData->addr), &addrSize);
         clientData->grille = serv->grille;
-        clientData->cond = serv->cond;
-        clientData->mutex = serv->mutex;
+        clientData->condServ = serv->cond;
+        clientData->mutexServ = serv->mutex;
         clientData->phaseDeJeu = serv->phaseDeJeu;
         clientData->timer = serv->timer;
         clientData->nbSession = serv->nbSession;
+        clientData->valide = 0;
+
+        pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
+        pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+        clientData->condClient = &cond;
+        clientData->mutexClient = &mutex;
 
         pthread_t pidT;
         pthread_create(&pidT, NULL, traiteClient, clientData);

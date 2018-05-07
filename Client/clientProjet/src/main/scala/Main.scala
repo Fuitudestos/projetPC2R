@@ -64,7 +64,7 @@ object MainApp
     def main(args: Array[String]): Unit =
     {
         print("Veuillez entrer votre nom d'utilisateur : ")
-        val pseudo = scala.io.StdIn.readLine()
+        var pseudo = scala.io.StdIn.readLine()
 
         print("Veuillez entrer le nom/adresse du serveur : ")
         val serveur = scala.io.StdIn.readLine()
@@ -72,18 +72,24 @@ object MainApp
         print("Veuillez entrer le port du serveur : ")
         val port = scala.io.StdIn.readInt()
 
-        println(pseudo)
-
         val socket = new Socket(InetAddress.getByName(serveur), port)
         var in = new BufferedSource(socket.getInputStream).getLines
         val out = new PrintStream(socket.getOutputStream)
 
-        val ui = new UI(out)
-        ui.visible = true
-
         out.println(pseudo)
 
         var tmp = in.next
+
+        while(tmp == "newPseudoRequired")
+        {
+            print("Le pseudo que vous avez entrer est deja pris, veuillez en choisir un autre : ")
+            pseudo = scala.io.StdIn.readLine()
+            out.println(pseudo)
+            tmp = in.next
+        }
+
+        val ui = new UI(out)
+        ui.visible = true
 
         while(true)
         {
