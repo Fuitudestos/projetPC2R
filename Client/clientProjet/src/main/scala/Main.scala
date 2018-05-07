@@ -1,6 +1,7 @@
 import java.net._
 import java.io._
 import scala.io._
+import java.awt.Color
 import swing._
 import scala.swing.event.Key
 import scala.swing.event.KeyPressed
@@ -8,40 +9,74 @@ import scala.swing.BorderPanel.Position._
 
 class UI(val out: PrintStream) extends MainFrame
 {
-    title = "Simple Client"
-
-    var grille = List[Label]()
+    var grille = List[Button]()
     val timer = new Label {font = new Font("Ariel", java.awt.Font.ITALIC, 50)}
-    val textfield = new TextField("Input")
+    val motProposer = new Label {font = new Font("Ariel", java.awt.Font.ITALIC, 50)}
+    val chatInput = new TextField()
+    val resetButton = new Button("Reset")
+
+    resetButton.background = Color.white
+    resetButton.font = new Font("Ariel", java.awt.Font.ITALIC, 50)
+    resetButton.border = Swing.EmptyBorder(0,0,0,0)
+
+    val chatZone = new TextArea
+    {
+        rows = 10
+        editable = false
+    }
 
     for(i <- 0 to 15)
     {
-        grille = new Label {font = new Font("Ariel", java.awt.Font.ITALIC, 50)}::grille
+        grille = new Button
+        {
+            font = new Font("Ariel", java.awt.Font.ITALIC, 50)
+            background = Color.white
+            border = Swing.EmptyBorder(0,0,0,0)
+        }::grille
     }
 
-    var gridPanel = new GridPanel(4,4)
+    var grilleGridPanel = new GridPanel(4,4)
     {
         for(i <- 0 to 15)
         {
             contents += grille.apply(i)
         }
+
+        background = Color.white
+    }
+
+    val leftGridPanel = new GridPanel(3,1)
+    {
+        contents += motProposer
+        contents += resetButton
+        contents += timer
+
+        background = Color.white
+    }
+
+    val mainGridPanel = new GridPanel(1,3)
+    {
+        contents += leftGridPanel
+        contents += grilleGridPanel
+        contents += chatZone
+
+        background = Color.white
     }
 
     contents = new BorderPanel
     {
-        layout(timer) = West
-        layout(gridPanel) = Center
-        layout(textfield) = South
+        layout(mainGridPanel) = Center
+        layout(chatInput) = South
     }
 
-    listenTo(textfield.keys)
+    listenTo(chatInput.keys)
 
     reactions +=
     {
-        case KeyPressed(_, Key.Enter, _, _) => out.println(textfield.text)
+        case KeyPressed(_, Key.Enter, _, _) => out.println(chatInput.text)
     }
 
-    size = new Dimension(500, 500)
+    size = new Dimension(1000, 600)
 
     def updateGrille(nouvelleGrille: String): Unit =
     {
@@ -90,6 +125,9 @@ object MainApp
 
         val ui = new UI(out)
         ui.visible = true
+        ui.title = "Connecté en tant que : "+pseudo
+        ui.background = Color.white
+        ui.resizable = false
 
         while(true)
         {

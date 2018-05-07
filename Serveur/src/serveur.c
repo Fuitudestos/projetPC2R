@@ -144,17 +144,17 @@ void* boggle(void *arg)
                 {
                     printf("C'est Bon !\n");
                     myData->joueurs[nbJoueur]->valide = 1;
-                    pthread_mutex_lock(myData->joueurs[nbJoueur]->mutexClient);
+                    pthread_mutex_lock(myData->mutex);
                     pthread_cond_signal(myData->joueurs[nbJoueur]->condClient);
-                    pthread_mutex_unlock(myData->joueurs[nbJoueur]->mutexClient);
+                    pthread_mutex_unlock(myData->mutex);
                     nbJoueur++;
                 }
                 else
                 {
                     printf("C'est pas Bon !\n");
-                    pthread_mutex_lock(myData->joueurs[nbJoueur]->mutexClient);
+                    pthread_mutex_lock(myData->mutex);
                     pthread_cond_signal(myData->joueurs[nbJoueur]->condClient);
-                    pthread_mutex_unlock(myData->joueurs[nbJoueur]->mutexClient);
+                    pthread_mutex_unlock(myData->mutex);
                 }
             }
 
@@ -195,11 +195,8 @@ void* traiteClient(void *arg)
 
     pthread_mutex_lock(myData->mutexServ);
     pthread_cond_signal(myData->condServ);
+    pthread_cond_wait(myData->condClient, myData->mutexServ);
     pthread_mutex_unlock(myData->mutexServ);
-
-    pthread_mutex_lock(myData->mutexClient);
-    pthread_cond_wait(myData->condClient, myData->mutexClient);
-    pthread_mutex_unlock(myData->mutexClient);
 
     while(myData->valide == 0)
     {

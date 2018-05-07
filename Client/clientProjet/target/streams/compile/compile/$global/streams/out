@@ -1,4 +1,4 @@
-[0m[[0m[31merror[0m] [0m[0m/home/charton/Bureau/projetPC2R/Client/clientProjet/src/main/scala/Main.scala:49:19: class Panel is abstract; cannot be instantiated[0m
-[0m[[0m[31merror[0m] [0m[0m    val myPanel = new Panel()[0m
-[0m[[0m[31merror[0m] [0m[0m                  ^[0m
+[0m[[0m[31merror[0m] [0m[0m/home/charton/Bureau/projetPC2R/Client/clientProjet/src/main/scala/Main.scala:18:36: value grey is not a member of object java.awt.Color[0m
+[0m[[0m[31merror[0m] [0m[0m    resetButton.background = Color.grey[0m
+[0m[[0m[31merror[0m] [0m[0m                                   ^[0m
 [0m[[0m[31merror[0m] [0m[0mone error found[0m
