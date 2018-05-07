@@ -117,6 +117,34 @@ int recherchePseudo(dataClient** joueurs, int nbJoueur, char* pseudo)
     return 0;
 }
 
+void extractPseudo(char* tab)
+{
+    int i;
+    int debut = 257;
+    int fin = 0;
+
+    for(i = 0; i < TAILLEBUFFER; i++)
+    {
+        if(debut == 257 && tab[i] == '/')
+        {
+            debut = ++i;
+        }
+        else if(fin == 0 && tab[i] == '/')
+        {
+            fin = i - 1;
+        }
+
+        if(tab[i] == 0)break;
+    }
+
+    for(i = 0; i < TAILLEBUFFER; i++)
+    {
+        if(tab[i] == 0)break;
+        if(i > fin-debut)tab[i] = 0;
+        else tab[i] = tab[debut + i];
+    }
+}
+
 void* boggle(void *arg)
 {
     printf("Coucou c'est moi le jeu\n");
@@ -137,7 +165,6 @@ void* boggle(void *arg)
     {
         for(timer = myData->nbMinute * 60; timer >= 0; timer--)
         {
-            //printf("%s\n", myData->joueurs[nbJoueur]->pseudo);
             if(myData->nbJoueur > nbJoueur)
             {
                 if(recherchePseudo(myData->joueurs, nbJoueur, myData->joueurs[nbJoueur]->pseudo) == 0)
@@ -187,11 +214,14 @@ void* traiteClient(void *arg)
     char* buffer = malloc(sizeof(char) * TAILLEBUFFER);
     int nbSeconde;
     int nbMinute;
-    int nbRead;
     int nbSession = 0;
 
-    myData->pseudo = memset(myData->pseudo, 0, TAILLEBUFFER);
-    read(myData->sock, myData->pseudo, TAILLEBUFFER);
+    buffer = memset(buffer, 0, TAILLEBUFFER);
+    read(myData->sock, buffer, TAILLEBUFFER);
+
+    extractPseudo(buffer);
+    memcpy(myData->pseudo, buffer, TAILLEBUFFER);
+    printf("Coucou toi : %s\n", myData->pseudo);
 
     pthread_mutex_lock(myData->mutexServ);
     pthread_cond_signal(myData->condServ);
@@ -201,10 +231,11 @@ void* traiteClient(void *arg)
     while(myData->valide == 0)
     {
         write(myData->sock, "newPseudoRequired\n", sizeof(char) * 18);
-        nbRead = read(myData->sock, myData->pseudo, TAILLEBUFFER);
+        buffer = memset(buffer, 0, TAILLEBUFFER);
+        read(myData->sock, buffer, TAILLEBUFFER);
 
-        memset(&(myData->pseudo[nbRead]), 0, TAILLEBUFFER - nbRead);
-        printf("%s\n", myData->pseudo);
+        extractPseudo(buffer);
+        memcpy(myData->pseudo, buffer, TAILLEBUFFER);
 
         pthread_mutex_lock(myData->mutexClient);
         pthread_cond_wait(myData->condClient, myData->mutexClient);

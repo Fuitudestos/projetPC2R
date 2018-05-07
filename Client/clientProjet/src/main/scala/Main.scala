@@ -111,7 +111,7 @@ object MainApp
         var in = new BufferedSource(socket.getInputStream).getLines
         val out = new PrintStream(socket.getOutputStream)
 
-        out.println(pseudo)
+        out.println("CONNEXION/"+pseudo+"/")
 
         var tmp = in.next
 
