@@ -8,14 +8,18 @@ struct dataClient
 
     int* timer;
     int* phaseDeJeu;
+    int* sizeMot;
 
     char* grille;
     char* pseudo;
+    char* motProposer;
 
     pthread_cond_t* condServ;
     pthread_cond_t* condClient;
     pthread_mutex_t* mutexServ;
     pthread_mutex_t* mutexClient;
+
+    FILE* dico;
 };
 
 typedef struct dataServ dataServ;
@@ -29,11 +33,13 @@ struct dataServ
     dataClient** joueurs;
     struct sockaddr_in addr;
     char* grille;
+    char* motProposer;
     pthread_cond_t* cond;
     pthread_mutex_t* mutex;
 
     int* timer;
     int* phaseDeJeu;
+    int* sizeMot;
 
     FILE* dico;
 };

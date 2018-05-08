@@ -5,19 +5,28 @@ import java.awt.Color
 import swing._
 import scala.swing.event.Key
 import scala.swing.event.KeyPressed
+import scala.swing.event.ButtonClicked
 import scala.swing.BorderPanel.Position._
 
 class UI(val out: PrintStream) extends MainFrame
 {
     var grille = List[Button]()
     val timer = new Label {font = new Font("Ariel", java.awt.Font.ITALIC, 50)}
-    val motProposer = new Label {font = new Font("Ariel", java.awt.Font.ITALIC, 50)}
     val chatInput = new TextField()
-    val resetButton = new Button("Reset")
 
-    resetButton.background = Color.white
-    resetButton.font = new Font("Ariel", java.awt.Font.ITALIC, 50)
-    resetButton.border = Swing.EmptyBorder(0,0,0,0)
+    val motProposer = new Button
+    {
+        background = Color.white
+        font = new Font("Ariel", java.awt.Font.ITALIC, 50)
+        border = Swing.EmptyBorder(0,0,0,0)
+    }
+
+    val resetButton = new Button("Reset")
+    {
+        background = Color.white
+        font = new Font("Ariel", java.awt.Font.ITALIC, 50)
+        border = Swing.EmptyBorder(0,0,0,0)
+    }
 
     val chatZone = new TextArea
     {
@@ -27,12 +36,16 @@ class UI(val out: PrintStream) extends MainFrame
 
     for(i <- 0 to 15)
     {
-        grille = new Button
+        val tmp = new Button
         {
             font = new Font("Ariel", java.awt.Font.ITALIC, 50)
             background = Color.white
             border = Swing.EmptyBorder(0,0,0,0)
-        }::grille
+        }
+
+        listenTo(tmp)
+
+        grille = tmp::grille
     }
 
     var grilleGridPanel = new GridPanel(4,4)
@@ -70,10 +83,18 @@ class UI(val out: PrintStream) extends MainFrame
     }
 
     listenTo(chatInput.keys)
+    listenTo(motProposer)
+    listenTo(resetButton)
 
     reactions +=
     {
         case KeyPressed(_, Key.Enter, _, _) => out.println(chatInput.text)
+        case ButtonClicked(b) =>
+        {
+            if(grille.contains(b)) motProposer.text += b.text
+            else if(b == motProposer) {out.println(b.text+'\0');b.text = "";b.repaint}
+            else if(b == resetButton) {motProposer.text = "";motProposer.repaint}
+        }
     }
 
     size = new Dimension(1000, 600)
@@ -89,7 +110,8 @@ class UI(val out: PrintStream) extends MainFrame
 
     def updateTimer(nouveauTimer: String): Unit =
     {
-        timer.text = nouveauTimer
+        if(nouveauTimer.last == '/') timer.text = nouveauTimer.init
+        else timer.text = nouveauTimer
         timer.repaint
     }
 }
@@ -133,7 +155,7 @@ object MainApp
         {
             println(tmp)
             if(tmp.take(12) == "TOUR/tirage/") ui.updateGrille(tmp.slice(12,tmp.size - 1))
-            else if(tmp.take(13) == "TOUR/newTime/")ui.updateTimer(tmp.slice(13,19))
+            else if(tmp.take(13) == "TOUR/newTime/")ui.updateTimer(tmp.slice(13,tmp.size - 1))
             tmp = in.next
         }
     }

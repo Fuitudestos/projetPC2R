@@ -88,8 +88,12 @@ int rechercheDansDico(char* mot, FILE* dico)
         while(mot[index] == tmp)
         {
             tmp = fgetc(dico);
-            if(tmp == '\n' && mot[index + 1] == 0) return 1;
-            else if(tmp == '\n' || mot[index + 1] == 0) break;
+            if(tmp == '\n' && mot[index + 1] == '\0')
+            {
+                rewind(dico);
+                return 1;
+            }
+            else if(tmp == '\n' || mot[index + 1] == '\0') break;
             index++;
         }
 
@@ -100,6 +104,7 @@ int rechercheDansDico(char* mot, FILE* dico)
         }
     }
 
+    rewind(dico);
     return 0;
 }
 
@@ -143,6 +148,68 @@ void extractPseudo(char* tab)
         if(tab[i] == 0)break;
         if(i > fin-debut)tab[i] = 0;
         else tab[i] = tab[debut + i];
+    }
+}
+
+int dejaProposer(char* mot, char* listeMot, int size)
+{
+    int i;
+    int index = 0;
+
+    for(i = 0; i < size; i++)
+    {
+        if(mot[index] == 0 && listeMot[i] == '/') return 1;
+        else if(mot[index] == 0 || listeMot[i] == '/') index = 0;
+        else if(mot[index] == listeMot[i]) index++;
+    }
+
+    return 0;
+}
+
+void ajouterMot(char* mot, char* listeMot, int* sizeMot)
+{
+    int i;
+    int size = *sizeMot;
+    int index = 0;
+
+    for(i = 0; i < size; i++)
+    {
+        if(mot[index] == 0) break;
+        if(listeMot[i] == 0)
+        {
+            listeMot[i] = mot[index];
+            index++;
+        }
+    }
+
+    if(mot[index] != 0)
+    {
+        *sizeMot = *sizeMot * 2;
+        char* tmp = malloc(sizeof(char) * size * 2);
+        memset(tmp, 0, size * 2);
+        memcpy(tmp, listeMot, size);
+
+        for(i = size; i < size * 2; i++)
+        {
+            if(mot[index] == 0) break;
+            tmp[i] = mot[index];
+            index++;
+        }
+
+        listeMot = tmp;
+    }
+
+    listeMot[i] = '/';
+}
+
+int tailleMot(char* mot)
+{
+    int i = 0;
+
+    while(1)
+    {
+        if(mot[i] == 0) return i;
+        i++;
     }
 }
 
@@ -269,13 +336,20 @@ void* traiteClient(void *arg)
             buffer = memset(buffer, 0, TAILLEBUFFER);
             sprintf(buffer, "TOUR/newTime/%d : %d/", nbMinute, nbSeconde);
 
-            write(myData->sock, buffer, sizeof(char) * TAILLEBUFFER);
+            write(myData->sock, buffer, sizeof(char) * 20);
             write(myData->sock, "\n", sizeof(char));
 
             buffer = memset(buffer, 0, TAILLEBUFFER);
             read(myData->sock, buffer, sizeof(buffer));
 
-            printf("%s", buffer);
+            if(buffer[0] != 0 && dejaProposer(buffer, myData->motProposer, *(myData->sizeMot)) == 0 && rechercheDansDico(buffer, myData->dico) == 1)
+            {
+                write(myData->sock, "MVALIDE/", sizeof(char) * 8);
+                write(myData->sock, buffer, tailleMot(buffer));
+                write(myData->sock, "/\n", sizeof(char) * 2);
+
+                ajouterMot(buffer, myData->motProposer, myData->sizeMot);
+            }
         }
 
         while(*myData->phaseDeJeu == 0)
@@ -305,6 +379,9 @@ void* accepteClient(void *arg)
         clientData->timer = serv->timer;
         clientData->nbSession = serv->nbSession;
         clientData->valide = 0;
+        clientData->motProposer = serv->motProposer;
+        clientData->sizeMot = serv->sizeMot;
+        clientData->dico = serv->dico;
 
         pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
         pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -394,11 +471,16 @@ int main(int argc, char * const argv[])
     }
 
     srand(time(NULL));
+    int* size = malloc(sizeof(int));
     int* phaseDeJeu = malloc(sizeof(int));
     int* timer = malloc(sizeof(int));
     char* grille = malloc(sizeof(char) * 16);
+    char* motProposer = malloc(sizeof(char) * TAILLEBUFFER);
+    memset(motProposer, 0, TAILLEBUFFER);
+
     dataClient** joueurs = malloc(sizeof(dataClient*) * 10);
 
+    *size = TAILLEBUFFER;
 
     pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
     pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -416,6 +498,8 @@ int main(int argc, char * const argv[])
     myData->nbSession = nbSession;
     myData->nbMinute = nbMinute;
     myData->dico = dico;
+    myData->motProposer = motProposer;
+    myData->sizeMot = size;
 
     printf("Coucou c'est moi le main\n");
     pthread_create(&pidB, NULL, boggle, myData);
@@ -425,8 +509,6 @@ int main(int argc, char * const argv[])
     myData->addr = serv;
 
     pthread_create(&pidAC, NULL, accepteClient, myData);
-
-    printf("%d\n", rechercheDansDico("CHIPS", dico));
 
     pthread_join(pidB, NULL);
 
