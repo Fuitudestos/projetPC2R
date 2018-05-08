@@ -230,7 +230,7 @@ void* traiteClient(void *arg)
 
     while(myData->valide == 0)
     {
-        write(myData->sock, "newPseudoRequired\n", sizeof(char) * 18);
+        write(myData->sock, "CONNEXION/BADPSEUDO/\n", sizeof(char) * 21);
         buffer = memset(buffer, 0, TAILLEBUFFER);
         read(myData->sock, buffer, TAILLEBUFFER);
 
@@ -248,12 +248,12 @@ void* traiteClient(void *arg)
     {
         printf("LectureGrille\n");
         int i;
-        write(myData->sock, "newGrille\n", sizeof(char) * 10);
+        write(myData->sock, "TOUR/tirage/", sizeof(char) * 12);
         for(i = 0; i < 16; i++)
         {
             write(myData->sock, &myData->grille[i], sizeof(myData->grille[i]));
         }
-        write(myData->sock, "\n", sizeof(char));
+        write(myData->sock, "/\n", sizeof(char) * 2);
         printf("EnvoiGrille\n");
 
         while(*myData->phaseDeJeu == 1)
@@ -266,10 +266,9 @@ void* traiteClient(void *arg)
             nbMinute = nbSeconde/60;
             nbSeconde = nbSeconde%60;
             buffer = memset(buffer, 0, TAILLEBUFFER);
-            sprintf(buffer, "%d : %d", nbMinute, nbSeconde);
+            sprintf(buffer, "TOUR/newTime/%d : %d/", nbMinute, nbSeconde);
 
-            write(myData->sock, "newTimer\n", sizeof(char) * 9);
-            write(myData->sock, buffer, sizeof(buffer));
+            write(myData->sock, buffer, sizeof(char) * TAILLEBUFFER);
             write(myData->sock, "\n", sizeof(char));
 
             buffer = memset(buffer, 0, TAILLEBUFFER);

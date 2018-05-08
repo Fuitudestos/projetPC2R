@@ -115,7 +115,7 @@ object MainApp
 
         var tmp = in.next
 
-        while(tmp == "newPseudoRequired")
+        while(tmp == "CONNEXION/BADPSEUDO/")
         {
             print("Le pseudo que vous avez entrer est deja pris, veuillez en choisir un autre : ")
             pseudo = scala.io.StdIn.readLine()
@@ -132,8 +132,8 @@ object MainApp
         while(true)
         {
             println(tmp)
-            if(tmp == "newGrille") ui.updateGrille(in.next)
-            if(tmp == "newTimer") ui.updateTimer(in.next)
+            if(tmp.take(12) == "TOUR/tirage/") ui.updateGrille(tmp.slice(12,tmp.size - 1))
+            else if(tmp.take(13) == "TOUR/newTime/")ui.updateTimer(tmp.slice(13,19))
             tmp = in.next
         }
     }
