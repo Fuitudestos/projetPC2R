@@ -44,16 +44,16 @@ void enleveAccent(FILE* dico)
                 monAccent[0] = tmp;
                 monAccent[1] = fgetc(dico);
 
-                if(strcmp(monAccent, "ü") == 0 || strcmp(monAccent, "û") == 0 || strcmp(monAccent, "ù") == 0){fputc('u', newDico);}
-                else if(strcmp(monAccent, "é") == 0 || strcmp(monAccent, "ê") == 0 || strcmp(monAccent, "ë") == 0 || strcmp(monAccent, "è") == 0){fputc('e', newDico);}
-                else if(strcmp(monAccent, "ï") == 0 || strcmp(monAccent, "î") == 0){fputc('i', newDico);}
-                else if(strcmp(monAccent, "ç") == 0){fputc('c', newDico);}
-                else if(strcmp(monAccent, "ô") == 0 || strcmp(monAccent, "ö") == 0){fputc('o', newDico);}
-                else if(strcmp(monAccent, "â") == 0 || strcmp(monAccent, "ä") == 0 || strcmp(monAccent, "à") == 0){fputc('a', newDico);}
+                if(strcmp(monAccent, "ü") == 0 || strcmp(monAccent, "û") == 0 || strcmp(monAccent, "ù") == 0){fputc('U', newDico);}
+                else if(strcmp(monAccent, "é") == 0 || strcmp(monAccent, "ê") == 0 || strcmp(monAccent, "ë") == 0 || strcmp(monAccent, "è") == 0){fputc('E', newDico);}
+                else if(strcmp(monAccent, "ï") == 0 || strcmp(monAccent, "î") == 0){fputc('I', newDico);}
+                else if(strcmp(monAccent, "ç") == 0){fputc('C', newDico);}
+                else if(strcmp(monAccent, "ô") == 0 || strcmp(monAccent, "ö") == 0){fputc('O', newDico);}
+                else if(strcmp(monAccent, "â") == 0 || strcmp(monAccent, "ä") == 0 || strcmp(monAccent, "à") == 0){fputc('A', newDico);}
             }
             else
             {
-                fputc(tmp, newDico);
+                fputc(toupper(tmp), newDico);
             }
 
             tmp = fgetc(dico);
@@ -83,6 +83,7 @@ int rechercheDansDico(char* mot, FILE* dico)
     while(feof(dico) == 0)
     {
         tmp = fgetc(dico);
+        index = 0;
 
         while(mot[index] == tmp)
         {
@@ -424,6 +425,8 @@ int main(int argc, char * const argv[])
     myData->addr = serv;
 
     pthread_create(&pidAC, NULL, accepteClient, myData);
+
+    printf("%d\n", rechercheDansDico("CHIPS", dico));
 
     pthread_join(pidB, NULL);
 
