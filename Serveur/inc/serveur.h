@@ -44,4 +44,15 @@ struct dataServ
     FILE* dico;
 };
 
+void enleveAccent(FILE* dico);
+int rechercheDansDico(char* mot, FILE* dico);
+int recherchePseudo(dataClient** joueurs, int nbJoueur, char* pseudo);
+void extractPseudo(char* tab);
+int dejaProposer(char* mot, char* listeMot, int size);
+void ajouterMot(char* mot, char* listeMot, int* sizeMot);
+int tailleMot(char* mot);
+int valideTrajectoire(char* mot, char* trajectoire);
+void valideMot(int sock, char* mot, char* listeMot, int* sizeMot, char* grille, FILE* dico);
+void* boggle(void *arg);
+void* traiteClient(void *arg);
 void* accepteClient(void* arg);

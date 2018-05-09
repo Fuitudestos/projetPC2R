@@ -10,9 +10,13 @@ import scala.swing.BorderPanel.Position._
 
 class UI(val out: PrintStream) extends MainFrame
 {
+    var adja = List[Button]()
     var grille = List[Button]()
+    var dejaUtiliser = List[AbstractButton]()
     val timer = new Label {font = new Font("Ariel", java.awt.Font.ITALIC, 50)}
     val chatInput = new TextField()
+
+    var trajectoire = ""
 
     val motProposer = new Button
     {
@@ -91,9 +95,42 @@ class UI(val out: PrintStream) extends MainFrame
         case KeyPressed(_, Key.Enter, _, _) => out.println(chatInput.text)
         case ButtonClicked(b) =>
         {
-            if(grille.contains(b)) motProposer.text += b.text
-            else if(b == motProposer) {out.println(b.text+'\0');b.text = "";b.repaint}
-            else if(b == resetButton) {motProposer.text = "";motProposer.repaint}
+            if(grille.contains(b))
+            {
+                b.enabled = false
+                motProposer.text += b.text
+                dejaUtiliser = b::dejaUtiliser
+                trajectoire += emplacement(b)
+                adja = adjacent(b)
+                for(g <- grille)
+                {
+                    if(adja.contains(g) && !dejaUtiliser.contains(g)) g.enabled = true
+                    else g.enabled = false
+                }
+            }
+            else if(b == motProposer)
+            {
+                dejaUtiliser = Nil
+                out.println("TROUVE/"+b.text+'/'+trajectoire+"/\0")
+                trajectoire = ""
+                b.text = ""
+                b.repaint
+                for(g <- grille)
+                {
+                    g.enabled = true
+                }
+            }
+            else if(b == resetButton)
+            {
+                dejaUtiliser = Nil
+                trajectoire = ""
+                motProposer.text = ""
+                motProposer.repaint
+                for(g <- grille)
+                {
+                    g.enabled = true
+                }
+            }
         }
     }
 
@@ -113,6 +150,50 @@ class UI(val out: PrintStream) extends MainFrame
         if(nouveauTimer.last == '/') timer.text = nouveauTimer.init
         else timer.text = nouveauTimer
         timer.repaint
+    }
+
+    def adjacent(b: AbstractButton): List[Button] =
+    {
+        grille.indexOf(b) match
+        {
+            case 0 => grille.apply(1)::grille.apply(4)::grille.apply(5)::Nil
+            case 1 => grille.apply(0)::grille.apply(2)::grille.apply(4)::grille.apply(5)::grille.apply(6)::Nil
+            case 2 => grille.apply(1)::grille.apply(3)::grille.apply(5)::grille.apply(6)::grille.apply(7)::Nil
+            case 3 => grille.apply(2)::grille.apply(6)::grille.apply(7)::Nil
+            case 4 => grille.apply(0)::grille.apply(1)::grille.apply(5)::grille.apply(8)::grille.apply(9)::Nil
+            case 7 => grille.apply(2)::grille.apply(3)::grille.apply(6)::grille.apply(10)::grille.apply(11)::Nil
+            case 8 => grille.apply(4)::grille.apply(5)::grille.apply(9)::grille.apply(12)::grille.apply(13)::Nil
+            case 11 => grille.apply(6)::grille.apply(7)::grille.apply(10)::grille.apply(14)::grille.apply(15)::Nil
+            case 12 => grille.apply(8)::grille.apply(9)::grille.apply(13)::Nil
+            case 13 => grille.apply(8)::grille.apply(9)::grille.apply(10)::grille.apply(12)::grille.apply(14)::Nil
+            case 14 => grille.apply(9)::grille.apply(10)::grille.apply(11)::grille.apply(13)::grille.apply(15)::Nil
+            case 15 => grille.apply(10)::grille.apply(11)::grille.apply(14)::Nil
+            case i =>
+            grille.apply(i-5)::grille.apply(i-4)::grille.apply(i-3)::grille.apply(i-1)::grille.apply(i+1)::grille.apply(i+3)::grille.apply(i+4)::grille.apply(i+5)::Nil
+        }
+    }
+
+    def emplacement(b: AbstractButton): String =
+    {
+        grille.indexOf(b) match
+        {
+            case 0 => "A1"
+            case 1 => "A2"
+            case 2 => "A3"
+            case 3 => "A4"
+            case 4 => "B1"
+            case 5 => "B2"
+            case 6 => "B3"
+            case 7 => "B4"
+            case 8 => "C1"
+            case 9 => "C2"
+            case 10 => "C3"
+            case 11 => "C4"
+            case 12 => "D1"
+            case 13 => "D2"
+            case 14 => "D3"
+            case 15 => "D4"
+        }
     }
 }
 

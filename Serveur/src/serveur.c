@@ -88,12 +88,12 @@ int rechercheDansDico(char* mot, FILE* dico)
         while(mot[index] == tmp)
         {
             tmp = fgetc(dico);
-            if(tmp == '\n' && mot[index + 1] == '\0')
+            if(tmp == '\n' && mot[index + 1] == '/')
             {
                 rewind(dico);
                 return 1;
             }
-            else if(tmp == '\n' || mot[index + 1] == '\0') break;
+            else if(tmp == '\n' || mot[index + 1] == '/') break;
             index++;
         }
 
@@ -158,8 +158,8 @@ int dejaProposer(char* mot, char* listeMot, int size)
 
     for(i = 0; i < size; i++)
     {
-        if(mot[index] == 0 && listeMot[i] == '/') return 1;
-        else if(mot[index] == 0 || listeMot[i] == '/') index = 0;
+        if(mot[index] == '/' && listeMot[i] == '/') return 1;
+        else if(mot[index] == '/' || listeMot[i] == '/') index = 0;
         else if(mot[index] == listeMot[i]) index++;
     }
 
@@ -174,7 +174,7 @@ void ajouterMot(char* mot, char* listeMot, int* sizeMot)
 
     for(i = 0; i < size; i++)
     {
-        if(mot[index] == 0) break;
+        if(mot[index] == '/') break;
         if(listeMot[i] == 0)
         {
             listeMot[i] = mot[index];
@@ -182,7 +182,7 @@ void ajouterMot(char* mot, char* listeMot, int* sizeMot)
         }
     }
 
-    if(mot[index] != 0)
+    if(mot[index] != '/')
     {
         *sizeMot = *sizeMot * 2;
         char* tmp = malloc(sizeof(char) * size * 2);
@@ -191,7 +191,7 @@ void ajouterMot(char* mot, char* listeMot, int* sizeMot)
 
         for(i = size; i < size * 2; i++)
         {
-            if(mot[index] == 0) break;
+            if(mot[index] == '/') break;
             tmp[i] = mot[index];
             index++;
         }
@@ -211,6 +211,50 @@ int tailleMot(char* mot)
         if(mot[i] == 0) return i;
         i++;
     }
+}
+
+int valideTrajectoire(char* mot, char* grille)
+{
+    return 1;
+}
+
+int valideLongueur(char* mot)
+{
+    int i = 0;
+    int fin = tailleMot(mot);
+
+    while(mot[i] != '/' && i < fin) i++;
+
+    if(i >= 3) return 1;
+    else return 0;
+}
+
+void valideMot(int sock, char* mot, char* listeMot, int* sizeMot, char* grille, FILE* dico)
+{
+    int i = 0;
+
+    while(mot[i] != '/') i++;
+
+    i++;
+
+    if(valideLongueur(&mot[i]) == 1)
+    {
+        if(rechercheDansDico(&mot[i], dico) == 1)
+        {
+            if(dejaProposer(&mot[i], listeMot, *sizeMot) == 0)
+            {
+                if(valideTrajectoire(&mot[i], grille) == 1)
+                {
+                    ajouterMot(&mot[i], listeMot, sizeMot);
+                    write(sock, "VALIDE/\n", sizeof(char) * 8);
+                }
+                else write(sock, "MINVALIDE/TRAJECTOIRE/\n", sizeof(char) * 23);
+            }
+            else write(sock, "MINVALIDE/PRI/\n", sizeof(char) * 15);
+        }
+        else write(sock, "MINVALIDE/DICTIONNAIRE/\n", sizeof(char) * 24);
+    }
+    else write(sock, "MINVALIDE/LONGUEUR/\n", sizeof(char) * 20);
 }
 
 void* boggle(void *arg)
@@ -340,15 +384,11 @@ void* traiteClient(void *arg)
             write(myData->sock, "\n", sizeof(char));
 
             buffer = memset(buffer, 0, TAILLEBUFFER);
-            read(myData->sock, buffer, sizeof(buffer));
+            read(myData->sock, buffer, TAILLEBUFFER);
 
-            if(buffer[0] != 0 && dejaProposer(buffer, myData->motProposer, *(myData->sizeMot)) == 0 && rechercheDansDico(buffer, myData->dico) == 1)
+            if(buffer[0] != 0)
             {
-                write(myData->sock, "MVALIDE/", sizeof(char) * 8);
-                write(myData->sock, buffer, tailleMot(buffer));
-                write(myData->sock, "/\n", sizeof(char) * 2);
-
-                ajouterMot(buffer, myData->motProposer, myData->sizeMot);
+                valideMot(myData->sock, buffer, myData->motProposer, myData->sizeMot, myData->grille, myData->dico);
             }
         }
 
