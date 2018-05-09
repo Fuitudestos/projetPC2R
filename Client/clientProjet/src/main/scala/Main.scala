@@ -10,10 +10,16 @@ import scala.swing.BorderPanel.Position._
 
 class UI(val out: PrintStream) extends MainFrame
 {
+    var lastScore = 0
+    var bestScore = 0
+    var score = 0
     var adja = List[Button]()
     var grille = List[Button]()
     var dejaUtiliser = List[AbstractButton]()
     val timer = new Label {font = new Font("Ariel", java.awt.Font.ITALIC, 50)}
+    val dernierScore = new Label {font = new Font("Ariel", java.awt.Font.ITALIC, 30); text = "Dernier Score : 0"}
+    val scoreActuel = new Label {font = new Font("Ariel", java.awt.Font.ITALIC, 30); text = "Score : 0"}
+    val meilleurScore = new Label {font = new Font("Ariel", java.awt.Font.ITALIC, 30); text = "Meilleur Score : 0"}
     val chatInput = new TextField()
 
     var trajectoire = ""
@@ -71,6 +77,15 @@ class UI(val out: PrintStream) extends MainFrame
         background = Color.white
     }
 
+    val scoreGridPanel = new GridPanel(1,3)
+    {
+        contents += dernierScore
+        contents += scoreActuel
+        contents += meilleurScore
+
+        background = Color.white
+    }
+
     val mainGridPanel = new GridPanel(1,3)
     {
         contents += leftGridPanel
@@ -82,6 +97,7 @@ class UI(val out: PrintStream) extends MainFrame
 
     contents = new BorderPanel
     {
+        layout(scoreGridPanel) = North
         layout(mainGridPanel) = Center
         layout(chatInput) = South
     }
@@ -143,6 +159,9 @@ class UI(val out: PrintStream) extends MainFrame
             grille.apply(i).text = nouvelleGrille.apply(i)+""
             grille.apply(i).repaint
         }
+
+        lastScore = score;dernierScore.text = "Dernier Score : "+lastScore;dernierScore.repaint
+        score = 0;scoreActuel.text = "Score : "+score;scoreActuel.repaint
     }
 
     def updateTimer(nouveauTimer: String): Unit =
@@ -150,6 +169,23 @@ class UI(val out: PrintStream) extends MainFrame
         if(nouveauTimer.last == '/') timer.text = nouveauTimer.init
         else timer.text = nouveauTimer
         timer.repaint
+    }
+
+    def updateScore(nouveauScore: String): Unit =
+    {
+        var tmp = 0
+
+        if(nouveauScore.head != '/')
+        {
+            tmp = nouveauScore.init.tail.tail.toInt
+        }
+        else
+        {
+            tmp = nouveauScore.init.tail.toInt
+        }
+
+        if(tmp > bestScore) bestScore = tmp;meilleurScore.text = "Meilleur Score : "+bestScore;meilleurScore.repaint
+        score += tmp;scoreActuel.text = "Score : "+score;scoreActuel.repaint
     }
 
     def adjacent(b: AbstractButton): List[Button] =
@@ -237,6 +273,7 @@ object MainApp
             println(tmp)
             if(tmp.take(12) == "TOUR/tirage/") ui.updateGrille(tmp.slice(12,tmp.size - 1))
             else if(tmp.take(13) == "TOUR/newTime/")ui.updateTimer(tmp.slice(13,tmp.size - 1))
+            //else if(tmp.take(8) == "MVALIDE/")ui.updateScore(tmp.takeRight(4))
             tmp = in.next
         }
     }

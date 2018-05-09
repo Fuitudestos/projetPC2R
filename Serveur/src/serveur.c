@@ -219,12 +219,15 @@ int valideTrajectoire(char* mot, char* grille)
 void valideMot(int sock, char* mot, char* listeMot, int* sizeMot, char* grille, FILE* dico)
 {
     int i = 0;
+    int score;
 
     while(mot[i] != '/') i++;
 
     i++;
 
-    if(tailleMot(mot) >= 3)
+    int taillemot = tailleMot(&mot[i]);
+
+    if(taillemot >= 3)
     {
         if(rechercheDansDico(&mot[i], dico) == 1)
         {
@@ -232,8 +235,23 @@ void valideMot(int sock, char* mot, char* listeMot, int* sizeMot, char* grille, 
             {
                 if(valideTrajectoire(&mot[i], grille) == 1)
                 {
+                    switch(taillemot)
+                    {
+                        case 3: score = 1;break;
+                        case 4: score = 1;break;
+                        case 5: score = 2;break;
+                        case 6: score = 3;break;
+                        case 7: score = 5;break;
+                        default : score = 11; break;
+                    }
+
+                    char* buffer = malloc(sizeof(char) * TAILLEBUFFER);
+                    memset(buffer, 0, TAILLEBUFFER);
                     ajouterMot(&mot[i], listeMot, sizeMot);
-                    write(sock, "VALIDE/\n", sizeof(char) * 8);
+                    extractPseudo(mot);
+                    sprintf(buffer, "MVALIDE/%s/%d/\n", mot, score);
+                    write(sock, buffer, sizeof(char) * 12 + taillemot);
+                    free(buffer);
                 }
                 else write(sock, "MINVALIDE/TRAJECTOIRE/\n", sizeof(char) * 23);
             }
@@ -365,10 +383,9 @@ void* traiteClient(void *arg)
             nbMinute = nbSeconde/60;
             nbSeconde = nbSeconde%60;
             buffer = memset(buffer, 0, TAILLEBUFFER);
-            sprintf(buffer, "TOUR/newTime/%d : %d/", nbMinute, nbSeconde);
+            sprintf(buffer, "TOUR/newTime/%d : %d/\n", nbMinute, nbSeconde);
 
-            write(myData->sock, buffer, sizeof(char) * 20);
-            write(myData->sock, "\n", sizeof(char));
+            write(myData->sock, buffer, sizeof(char) * 21);
 
             buffer = memset(buffer, 0, TAILLEBUFFER);
             read(myData->sock, buffer, TAILLEBUFFER);
