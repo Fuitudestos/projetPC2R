@@ -206,27 +206,14 @@ int tailleMot(char* mot)
 {
     int i = 0;
 
-    while(1)
-    {
-        if(mot[i] == 0) return i;
-        i++;
-    }
+    while(mot[i] != '/' && mot[i] != 0) i++;
+
+    return i;
 }
 
 int valideTrajectoire(char* mot, char* grille)
 {
     return 1;
-}
-
-int valideLongueur(char* mot)
-{
-    int i = 0;
-    int fin = tailleMot(mot);
-
-    while(mot[i] != '/' && i < fin) i++;
-
-    if(i >= 3) return 1;
-    else return 0;
 }
 
 void valideMot(int sock, char* mot, char* listeMot, int* sizeMot, char* grille, FILE* dico)
@@ -237,7 +224,7 @@ void valideMot(int sock, char* mot, char* listeMot, int* sizeMot, char* grille, 
 
     i++;
 
-    if(valideLongueur(&mot[i]) == 1)
+    if(tailleMot(mot) >= 3)
     {
         if(rechercheDansDico(&mot[i], dico) == 1)
         {
