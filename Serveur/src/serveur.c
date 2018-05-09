@@ -381,10 +381,9 @@ void* traiteClient(void *arg)
             nbMinute = nbSeconde/60;
             nbSeconde = nbSeconde%60;
             buffer = memset(buffer, 0, TAILLEBUFFER);
-            sprintf(buffer, "TOUR/newTime/%d : %d/", nbMinute, nbSeconde);
+            sprintf(buffer, "TOUR/newTime/%d : %d/\n", nbMinute, nbSeconde);
 
-            write(myData->sock, buffer, sizeof(char) * 20);
-            write(myData->sock, "\n", sizeof(char));
+            write(myData->sock, buffer, sizeof(char) * 21);
 
             buffer = memset(buffer, 0, TAILLEBUFFER);
             read(myData->sock, buffer, TAILLEBUFFER);
