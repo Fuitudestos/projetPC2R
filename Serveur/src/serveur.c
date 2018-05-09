@@ -219,12 +219,15 @@ int valideTrajectoire(char* mot, char* grille)
 void valideMot(int sock, char* mot, char* listeMot, int* sizeMot, char* grille, FILE* dico)
 {
     int i = 0;
+    int score;
 
     while(mot[i] != '/') i++;
 
     i++;
 
-    if(tailleMot(mot) >= 3)
+    int size = tailleMot(&mot[i]);
+
+    if(size >= 3)
     {
         if(rechercheDansDico(&mot[i], dico) == 1)
         {
@@ -232,8 +235,21 @@ void valideMot(int sock, char* mot, char* listeMot, int* sizeMot, char* grille, 
             {
                 if(valideTrajectoire(&mot[i], grille) == 1)
                 {
+                    switch(size)
+                    {
+                        case 3: score = 1;break;
+                        case 4: score = 1;break;
+                        case 5: score = 2;break;
+                        case 6: score = 3;break;
+                        case 7: score = 5;break;
+                        default: score = 11;break;
+                    }
                     ajouterMot(&mot[i], listeMot, sizeMot);
-                    write(sock, "VALIDE/\n", sizeof(char) * 8);
+                    extractPseudo(mot);
+                    char* buffer = malloc(sizeof(char) * TAILLEBUFFER);
+                    memset(buffer, 0, TAILLEBUFFER);
+                    sprintf(buffer, "MVALIDE/%s/%d/\n", mot, score);
+                    write(sock, buffer, sizeof(char) * 11 + size + sizeof(score));
                 }
                 else write(sock, "MINVALIDE/TRAJECTOIRE/\n", sizeof(char) * 23);
             }
