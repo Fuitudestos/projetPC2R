@@ -1,3 +1,19 @@
+typedef struct message message;
+struct message
+{
+    char* source;
+    char* destinataire;
+    char* contenu;
+
+    message* suivant;
+};
+
+typedef struct fileMessage fileMessage;
+struct fileMessage
+{
+    message* premier;
+};
+
 typedef struct dataClient dataClient;
 struct dataClient
 {
@@ -20,6 +36,8 @@ struct dataClient
     pthread_mutex_t* mutexClient;
 
     FILE* dico;
+
+    fileMessage* file;
 };
 
 typedef struct dataServ dataServ;
@@ -42,8 +60,13 @@ struct dataServ
     int* sizeMot;
 
     FILE* dico;
+
+    fileMessage* file;
 };
 
+
+void enfiler(fileMessage* file, char* source, char* destinataire, char* contenu);
+message* defiler(fileMessage* file);
 void enleveAccent(FILE* dico);
 int rechercheDansDico(char* mot, FILE* dico);
 int recherchePseudo(dataClient** joueurs, int nbJoueur, char* pseudo);
@@ -53,6 +76,8 @@ void ajouterMot(char* mot, char* listeMot, int* sizeMot);
 int tailleMot(char* mot);
 int valideTrajectoire(char* mot, char* trajectoire);
 void valideMot(int sock, char* mot, char* listeMot, int* sizeMot, char* grille, FILE* dico);
+void messageBroadcast(message* msg, dataClient** joueurs, int nbJoueur);
+void messagePrive(message* msg, int sock);
 void* boggle(void *arg);
 void* traiteClient(void *arg);
 void* accepteClient(void* arg);

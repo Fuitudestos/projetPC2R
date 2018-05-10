@@ -26,6 +26,38 @@
 
 #define TAILLEBUFFER 256
 
+void enfiler(fileMessage* file, char* source, char* destinataire, char* contenu)
+{
+    message* nouveau = malloc(sizeof(message));
+
+    nouveau->source = source;
+    nouveau->destinataire = destinataire;
+    nouveau->contenu = contenu;
+    nouveau->suivant = NULL;
+
+    if(file->premier != NULL)
+    {
+        message* tmp = file->premier;
+
+        while(tmp->suivant != NULL) tmp = tmp->suivant;
+        tmp->suivant = nouveau;
+    }
+    else file->premier = nouveau;
+}
+
+message* defiler(fileMessage* file)
+{
+    message* res = NULL;
+
+    if(file->premier != NULL)
+    {
+        res = file->premier;
+        file->premier = res->suivant;
+    }
+
+    return res;
+}
+
 void enleveAccent(FILE* dico)
 {
     char tmp;
@@ -116,7 +148,7 @@ int recherchePseudo(dataClient** joueurs, int nbJoueur, char* pseudo)
     {
         if(strcmp(pseudo, joueurs[i]->pseudo) == 0)
         {
-            return 1;
+            return i;
         }
     }
 
@@ -138,9 +170,8 @@ void extractPseudo(char* tab)
         else if(fin == 0 && tab[i] == '/')
         {
             fin = i - 1;
+            break;
         }
-
-        if(tab[i] == 0)break;
     }
 
     for(i = 0; i < TAILLEBUFFER; i++)
@@ -149,6 +180,39 @@ void extractPseudo(char* tab)
         if(i > fin-debut)tab[i] = 0;
         else tab[i] = tab[debut + i];
     }
+}
+
+char* extractDestinataire(char* tab)
+{
+    char* res = malloc(sizeof(char) * TAILLEBUFFER);
+    memset(res, 0, TAILLEBUFFER);
+
+    int i;
+    int debut = 257;
+    int fin = 0;
+
+    for(i = 256; i > 0; i--)
+    {
+        if(fin == 0 && tab[i] == '/')
+        {
+            fin = --i;
+        }
+        else if(debut == 257 && tab[i] == '/')
+        {
+            debut = i + 1;
+            break;
+        }
+    }
+
+    int index = 0;
+
+    for(i = debut; i < fin; i++)
+    {
+        res[index] = tab[i];
+        index++;
+    }
+
+    return res;
 }
 
 int dejaProposer(char* mot, char* listeMot, int size)
@@ -260,6 +324,37 @@ void valideMot(int sock, char* mot, char* listeMot, int* sizeMot, char* grille, 
     else write(sock, "MINVALIDE/LONGUEUR/\n", sizeof(char) * 20);
 }
 
+void messageBroadcast(message* msg, dataClient** joueurs, int nbJoueur)
+{
+    int i;
+    char* buffer = malloc(sizeof(char) * TAILLEBUFFER);
+    memset(buffer, 0, TAILLEBUFFER);
+    sprintf(buffer, "RECEPTION/%s/%s/\n", msg->contenu, msg->source);
+
+    for(i = 0; i < nbJoueur; i++)
+    {
+        write(joueurs[i]->sock, buffer, 15 + tailleMot(msg->contenu) + tailleMot(msg->source));
+    }
+
+    free(msg->source);
+    free(msg->contenu);
+    free(msg);
+}
+
+void messagePrive(message* msg, int sock)
+{
+    char* buffer = malloc(sizeof(char) * TAILLEBUFFER);
+    memset(buffer, 0, TAILLEBUFFER);
+    sprintf(buffer, "RECEPTION/%s/%s/\n", msg->contenu, msg->source);
+
+    write(sock, buffer, 15 + tailleMot(msg->contenu) + tailleMot(msg->source));
+
+    free(msg->source);
+    free(msg->destinataire);
+    free(msg->contenu);
+    free(msg);
+}
+
 void* boggle(void *arg)
 {
     printf("Coucou c'est moi le jeu\n");
@@ -267,6 +362,7 @@ void* boggle(void *arg)
     int timer;
     int nbSession = 0;
     int nbJoueur = 0;
+    int index;
     pthread_mutex_lock(myData->mutex);
     *myData->phaseDeJeu = 0;
     myData->grille = tirageGrille(myData->grille);
@@ -274,17 +370,17 @@ void* boggle(void *arg)
     pthread_cond_wait(myData->cond, myData->mutex);
     pthread_mutex_unlock(myData->mutex);
 
-    printf("%d : %d\n", myData->nbJoueur, nbJoueur);
+    message* msg;
 
     while(nbSession < myData->nbSession)
     {
         for(timer = myData->nbMinute * 60; timer >= 0; timer--)
         {
-            if(myData->nbJoueur > nbJoueur)
+            while(myData->nbJoueur > nbJoueur)
             {
                 if(recherchePseudo(myData->joueurs, nbJoueur, myData->joueurs[nbJoueur]->pseudo) == 0)
                 {
-                    printf("C'est Bon !\n");
+                    printf("C'est Bon : %s\n", myData->joueurs[nbJoueur]->pseudo);
                     myData->joueurs[nbJoueur]->valide = 1;
                     pthread_mutex_lock(myData->mutex);
                     pthread_cond_signal(myData->joueurs[nbJoueur]->condClient);
@@ -298,6 +394,19 @@ void* boggle(void *arg)
                     pthread_cond_signal(myData->joueurs[nbJoueur]->condClient);
                     pthread_mutex_unlock(myData->mutex);
                 }
+            }
+
+            msg = defiler(myData->file);
+            while(msg != NULL)
+            {
+                if(msg->destinataire == NULL) messageBroadcast(msg, myData->joueurs, myData->nbJoueur);
+                else
+                {
+                    index = recherchePseudo(myData->joueurs, myData->nbJoueur, msg->destinataire);
+                    messagePrive(msg, myData->joueurs[index]->sock);
+                }
+
+                msg = defiler(myData->file);
             }
 
             pthread_mutex_lock(myData->mutex);
@@ -331,12 +440,12 @@ void* traiteClient(void *arg)
     int nbMinute;
     int nbSession = 0;
 
-    buffer = memset(buffer, 0, TAILLEBUFFER);
+    memset(myData->pseudo, 0, TAILLEBUFFER);
+    memset(buffer, 0, TAILLEBUFFER);
     read(myData->sock, buffer, TAILLEBUFFER);
 
     extractPseudo(buffer);
     memcpy(myData->pseudo, buffer, TAILLEBUFFER);
-    printf("Coucou toi : %s\n", myData->pseudo);
 
     pthread_mutex_lock(myData->mutexServ);
     pthread_cond_signal(myData->condServ);
@@ -346,7 +455,7 @@ void* traiteClient(void *arg)
     while(myData->valide == 0)
     {
         write(myData->sock, "CONNEXION/BADPSEUDO/\n", sizeof(char) * 21);
-        buffer = memset(buffer, 0, TAILLEBUFFER);
+        memset(buffer, 0, TAILLEBUFFER);
         read(myData->sock, buffer, TAILLEBUFFER);
 
         extractPseudo(buffer);
@@ -388,9 +497,28 @@ void* traiteClient(void *arg)
             buffer = memset(buffer, 0, TAILLEBUFFER);
             read(myData->sock, buffer, TAILLEBUFFER);
 
-            if(buffer[0] != 0)
+            if(buffer[0] == 'T')
             {
                 valideMot(myData->sock, buffer, myData->motProposer, myData->sizeMot, myData->grille, myData->dico);
+            }
+
+            if(buffer[0] == 'E')
+            {
+                char* source = malloc(sizeof(char) * TAILLEBUFFER);
+                memset(source, 0, TAILLEBUFFER);
+                extractPseudo(buffer);
+                memcpy(source, buffer, TAILLEBUFFER);
+                enfiler(myData->file, myData->pseudo, NULL, buffer);
+            }
+
+            if(buffer[0] == 'P')
+            {
+                char* destinataire = extractDestinataire(buffer);
+                char* source = malloc(sizeof(char) * TAILLEBUFFER);
+                memset(source, 0, TAILLEBUFFER);
+                extractPseudo(buffer);
+                memcpy(source, buffer, TAILLEBUFFER);
+                enfiler(myData->file, myData->pseudo, destinataire, buffer);
             }
         }
 
@@ -424,6 +552,7 @@ void* accepteClient(void *arg)
         clientData->motProposer = serv->motProposer;
         clientData->sizeMot = serv->sizeMot;
         clientData->dico = serv->dico;
+        clientData->file = serv->file;
 
         pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
         pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -518,6 +647,8 @@ int main(int argc, char * const argv[])
     int* timer = malloc(sizeof(int));
     char* grille = malloc(sizeof(char) * 16);
     char* motProposer = malloc(sizeof(char) * TAILLEBUFFER);
+    fileMessage* file = malloc(sizeof(fileMessage));
+    file->premier = NULL;
     memset(motProposer, 0, TAILLEBUFFER);
 
     dataClient** joueurs = malloc(sizeof(dataClient*) * 10);
@@ -542,6 +673,7 @@ int main(int argc, char * const argv[])
     myData->dico = dico;
     myData->motProposer = motProposer;
     myData->sizeMot = size;
+    myData->file = file;
 
     printf("Coucou c'est moi le main\n");
     pthread_create(&pidB, NULL, boggle, myData);

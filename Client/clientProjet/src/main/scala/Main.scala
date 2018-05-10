@@ -8,8 +8,10 @@ import scala.swing.event.KeyPressed
 import scala.swing.event.ButtonClicked
 import scala.swing.BorderPanel.Position._
 
-class UI(val out: PrintStream) extends MainFrame
+class UI(out: PrintStream, pseudo: String) extends MainFrame
 {
+    title = "Connecté en tant que : "+pseudo
+
     var bestScore = 0
     var actualScore = 0
     var lastScore = 0
@@ -43,9 +45,14 @@ class UI(val out: PrintStream) extends MainFrame
 
     val chatZone = new TextArea
     {
+        font = new Font("Ariel", java.awt.Font.ITALIC, 20)
         rows = 10
+        lineWrap = true
+        wordWrap = true
         editable = false
     }
+
+    val scrollableChatZone = new ScrollPane(chatZone){border = Swing.EmptyBorder(0,0,0,0)}
 
     for(i <- 0 to 15)
     {
@@ -93,7 +100,7 @@ class UI(val out: PrintStream) extends MainFrame
     {
         contents += leftGridPanel
         contents += grilleGridPanel
-        contents += chatZone
+        contents += scrollableChatZone
 
         background = Color.white
     }
@@ -111,7 +118,11 @@ class UI(val out: PrintStream) extends MainFrame
 
     reactions +=
     {
-        case KeyPressed(_, Key.Enter, _, _) => println(actualScore)
+        case KeyPressed(_, Key.Enter, _, _) =>
+        {
+            out.println("ENVOI/"+chatInput.text+'/')
+            chatInput.text = ""
+        }
         case ButtonClicked(b) =>
         {
             if(grille.contains(b))
@@ -191,6 +202,25 @@ class UI(val out: PrintStream) extends MainFrame
         actualScore += tmp;actualScoreLabel.text = "Score : "+actualScore;actualScoreLabel.repaint
     }
 
+    def nouveauMessage(msg: String): Unit =
+    {
+        var tmp = false
+        var message = ""
+        var pseudo = ""
+
+        for(c <- msg)
+        {
+            if(c == '/') tmp = true
+
+            if(tmp) pseudo = pseudo:+c
+            else message = message:+c
+        }
+
+        pseudo = pseudo.tail
+
+        chatZone.append(pseudo+" : "+message+'\n')
+    }
+
     def adjacent(b: AbstractButton): List[Button] =
     {
         grille.indexOf(b) match
@@ -265,9 +295,8 @@ object MainApp
             tmp = in.next
         }
 
-        val ui = new UI(out)
+        val ui = new UI(out, pseudo)
         ui.visible = true
-        ui.title = "Connecté en tant que : "+pseudo
         ui.background = Color.white
         ui.resizable = false
 
@@ -277,6 +306,7 @@ object MainApp
             if(tmp.take(12) == "TOUR/tirage/") ui.updateGrille(tmp.slice(12,tmp.size - 1))
             else if(tmp.take(13) == "TOUR/newTime/")ui.updateTimer(tmp.slice(13,tmp.size - 1))
             else if(tmp.take(8) == "MVALIDE/")ui.updateScore(tmp.takeRight(4))
+            else if(tmp.take(10) == "RECEPTION/")ui.nouveauMessage(tmp.drop(10))
             tmp = in.next
         }
     }
