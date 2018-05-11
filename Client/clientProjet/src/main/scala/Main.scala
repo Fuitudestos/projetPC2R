@@ -168,10 +168,20 @@ class UI(out: PrintStream, pseudo: String) extends MainFrame
 
     def updateGrille(nouvelleGrille: String): Unit =
     {
-        for(i <- 0 to 15)
+        var newG = nouvelleGrille
+        var nb = 0
+
+        while(nb != 2)
         {
-            grille.apply(i).text = nouvelleGrille.apply(i)+""
-            grille.apply(i).repaint
+            if(newG.head == '/') nb = nb + 1
+            newG = newG.tail
+        }
+
+        for(b <- grille)
+        {
+            b.text = newG.head + ""
+            b.repaint
+            newG = newG.tail
         }
 
         lastScore = actualScore;lastScoreLabel.text = "Dernier Score : "+lastScore;lastScoreLabel.repaint
@@ -180,8 +190,23 @@ class UI(out: PrintStream, pseudo: String) extends MainFrame
 
     def updateTimer(nouveauTimer: String): Unit =
     {
-        if(nouveauTimer.last == '/') timer.text = nouveauTimer.init
-        else timer.text = nouveauTimer
+        var newT = nouveauTimer
+        var tmp = ""
+        var nb = 0
+
+        while(nb != 2)
+        {
+            if(newT.head == '/') nb = nb + 1
+            newT = newT.tail
+        }
+
+        while(newT.head != '/')
+        {
+            tmp = tmp:+newT.head
+            newT = newT.tail
+        }
+
+        timer.text = tmp
         timer.repaint
     }
 
@@ -204,19 +229,27 @@ class UI(out: PrintStream, pseudo: String) extends MainFrame
 
     def nouveauMessage(msg: String): Unit =
     {
-        var tmp = false
+        var newM = msg
         var message = ""
         var pseudo = ""
+        var nb = 0
 
-        for(c <- msg)
+        while(nb != 1)
         {
-            if(c == '/') tmp = true
+            if(newM.head == '/') nb = nb + 1
+            newM = newM.tail
+        }
 
-            if(tmp) pseudo = pseudo:+c
+        for(c <- newM)
+        {
+            if(c == '/') nb = nb + 1
+
+            if(nb == 2) pseudo = pseudo:+c
             else message = message:+c
         }
 
         pseudo = pseudo.tail
+        message = message.init
 
         chatZone.append(pseudo+" : "+message+'\n')
     }
@@ -303,10 +336,10 @@ object MainApp
         while(true)
         {
             println(tmp)
-            if(tmp.take(12) == "TOUR/tirage/") ui.updateGrille(tmp.slice(12,tmp.size - 1))
-            else if(tmp.take(13) == "TOUR/newTime/")ui.updateTimer(tmp.slice(13,tmp.size - 1))
-            else if(tmp.take(8) == "MVALIDE/")ui.updateScore(tmp.takeRight(4))
-            else if(tmp.take(10) == "RECEPTION/")ui.nouveauMessage(tmp.drop(10))
+            if(tmp.contains("TOUR/tirage/")) ui.updateGrille(tmp)
+            else if(tmp.contains("TOUR/newTime/")) ui.updateTimer(tmp)
+            else if(tmp.contains("MVALIDE/")) ui.updateScore(tmp.takeRight(4))
+            else if(tmp.contains("RECEPTION/")) ui.nouveauMessage(tmp)
             tmp = in.next
         }
     }

@@ -30,9 +30,18 @@ void enfiler(fileMessage* file, char* source, char* destinataire, char* contenu)
 {
     message* nouveau = malloc(sizeof(message));
 
-    nouveau->source = source;
-    nouveau->destinataire = destinataire;
-    nouveau->contenu = contenu;
+    nouveau->source = malloc(sizeof(char) * TAILLEBUFFER);
+    nouveau->contenu = malloc(sizeof(char) * TAILLEBUFFER);
+
+    memcpy(nouveau->source, source, TAILLEBUFFER);
+    memcpy(nouveau->contenu, contenu, TAILLEBUFFER);
+
+    if(destinataire != NULL)
+    {
+        nouveau->destinataire = malloc(sizeof(char) * TAILLEBUFFER);
+        memcpy(nouveau->destinataire, destinataire, TAILLEBUFFER);
+    }
+
     nouveau->suivant = NULL;
 
     if(file->premier != NULL)
@@ -330,6 +339,7 @@ void messageBroadcast(message* msg, dataClient** joueurs, int nbJoueur)
     char* buffer = malloc(sizeof(char) * TAILLEBUFFER);
     memset(buffer, 0, TAILLEBUFFER);
     sprintf(buffer, "RECEPTION/%s/%s/\n", msg->contenu, msg->source);
+    //printf("contenu : %s, Source : %s\n", msg->contenu, msg->source);
 
     for(i = 0; i < nbJoueur; i++)
     {
@@ -345,7 +355,7 @@ void messagePrive(message* msg, int sock)
 {
     char* buffer = malloc(sizeof(char) * TAILLEBUFFER);
     memset(buffer, 0, TAILLEBUFFER);
-    sprintf(buffer, "RECEPTION/%s/%s/\n", msg->contenu, msg->source);
+    sprintf(buffer, "PRECEPTION/%s/%s/\n", msg->contenu, msg->source);
 
     write(sock, buffer, 15 + tailleMot(msg->contenu) + tailleMot(msg->source));
 
@@ -408,6 +418,8 @@ void* boggle(void *arg)
 
                 msg = defiler(myData->file);
             }
+
+            printf("RC : %s\n", myData->joueurs[0]->pseudo);
 
             pthread_mutex_lock(myData->mutex);
             *myData->phaseDeJeu = 1;
@@ -475,7 +487,7 @@ void* traiteClient(void *arg)
         write(myData->sock, "TOUR/tirage/", sizeof(char) * 12);
         for(i = 0; i < 16; i++)
         {
-            write(myData->sock, &myData->grille[i], sizeof(myData->grille[i]));
+            write(myData->sock, &myData->grille[i], sizeof(char));
         }
         write(myData->sock, "/\n", sizeof(char) * 2);
         printf("EnvoiGrille\n");
@@ -491,8 +503,7 @@ void* traiteClient(void *arg)
             nbSeconde = nbSeconde%60;
             buffer = memset(buffer, 0, TAILLEBUFFER);
             sprintf(buffer, "TOUR/newTime/%d : %d/\n", nbMinute, nbSeconde);
-
-            write(myData->sock, buffer, sizeof(char) * 21);
+            write(myData->sock, buffer, sizeof(char) * 25);
 
             buffer = memset(buffer, 0, TAILLEBUFFER);
             read(myData->sock, buffer, TAILLEBUFFER);
@@ -508,6 +519,7 @@ void* traiteClient(void *arg)
                 memset(source, 0, TAILLEBUFFER);
                 extractPseudo(buffer);
                 memcpy(source, buffer, TAILLEBUFFER);
+                printf("Pseudo : %s, Message : %s\n", myData->pseudo, buffer);
                 enfiler(myData->file, myData->pseudo, NULL, buffer);
             }
 
@@ -524,7 +536,28 @@ void* traiteClient(void *arg)
 
         while(*myData->phaseDeJeu == 0)
         {
+            buffer = memset(buffer, 0, TAILLEBUFFER);
             read(myData->sock, buffer, sizeof(buffer));
+
+            if(buffer[0] == 'E')
+            {
+                char* source = malloc(sizeof(char) * TAILLEBUFFER);
+                memset(source, 0, TAILLEBUFFER);
+                extractPseudo(buffer);
+                memcpy(source, buffer, TAILLEBUFFER);
+                printf("Pseudo : %s, Message : %s\n", myData->pseudo, buffer);
+                enfiler(myData->file, myData->pseudo, NULL, buffer);
+            }
+
+            if(buffer[0] == 'P')
+            {
+                char* destinataire = extractDestinataire(buffer);
+                char* source = malloc(sizeof(char) * TAILLEBUFFER);
+                memset(source, 0, TAILLEBUFFER);
+                extractPseudo(buffer);
+                memcpy(source, buffer, TAILLEBUFFER);
+                enfiler(myData->file, myData->pseudo, destinataire, buffer);
+            }
         }
         nbSession++;
     }
