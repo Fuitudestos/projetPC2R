@@ -8,7 +8,7 @@ import scala.swing.event.KeyPressed
 import scala.swing.event.ButtonClicked
 import scala.swing.BorderPanel.Position._
 
-class UI(out: PrintStream, pseudo: String) extends MainFrame
+class UI(out: PrintStream, pseudo: String, writer: PrintWriter) extends MainFrame
 {
     title = "Connecté en tant que : "+pseudo
 
@@ -132,6 +132,7 @@ class UI(out: PrintStream, pseudo: String) extends MainFrame
                 }
 
                 chatZone.append(pseudo+" : "+input.tail+'\n')
+                writer.write(pseudo+" : "+input.tail+'\n')
                 println(tmp)
                 out.println("PENVOI/"+input.tail+'/'+tmp+'/')
             }
@@ -267,6 +268,29 @@ class UI(out: PrintStream, pseudo: String) extends MainFrame
         message = message.init
 
         chatZone.append(pseudo+" : "+message+'\n')
+        writer.write(pseudo+" : "+message+'\n')
+    }
+
+    def bienvenue(msg: String): Unit =
+    {
+        var newM = msg
+        var pseudo = ""
+        var nb = 0
+
+        while(nb != 1)
+        {
+            if(newM.head == '/') nb = nb + 1
+            newM = newM.tail
+        }
+
+        while(newM.head != '/')
+        {
+            pseudo = pseudo:+newM.head
+            newM = newM.tail
+        }
+
+        chatZone.append("Bienvenue a : "+pseudo+'\n')
+        writer.write("Bienvenue a : "+pseudo+'\n')
     }
 
     def adjacent(b: AbstractButton): List[Button] =
@@ -312,6 +336,12 @@ class UI(out: PrintStream, pseudo: String) extends MainFrame
             case 15 => "D4"
         }
     }
+
+    override def closeOperation(): Unit =
+    {
+        out.println("SORT/"+pseudo+"/")
+        writer.close
+    }
 }
 
 object MainApp
@@ -343,18 +373,24 @@ object MainApp
             tmp = in.next
         }
 
-        val ui = new UI(out, pseudo)
+        val writer = new PrintWriter(new File("log.txt"))
+
+        val ui = new UI(out, pseudo, writer)
         ui.visible = true
         ui.background = Color.white
         ui.resizable = false
 
-        while(true)
+        while(ui.visible == true)
         {
+            writer.write(tmp+'\n')
             if(tmp.contains("TOUR/tirage/")) ui.updateGrille(tmp)
             else if(tmp.contains("TOUR/newTime/")) ui.updateTimer(tmp)
             else if(tmp.contains("MVALIDE/")) ui.updateScore(tmp.takeRight(4))
             else if(tmp.contains("RECEPTION/")) ui.nouveauMessage(tmp)
+            else if(tmp.contains("CONNECTE/")) ui.bienvenue(tmp)
             tmp = in.next
         }
+
+        sys.exit(0)
     }
 }

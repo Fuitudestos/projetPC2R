@@ -339,7 +339,6 @@ void messageBroadcast(message* msg, dataClient** joueurs, int nbJoueur)
     char* buffer = malloc(sizeof(char) * TAILLEBUFFER);
     memset(buffer, 0, TAILLEBUFFER);
     sprintf(buffer, "RECEPTION/%s/%s/\n", msg->contenu, msg->source);
-    //printf("contenu : %s, Source : %s\n", msg->contenu, msg->source);
 
     for(i = 0; i < nbJoueur; i++)
     {
@@ -369,10 +368,14 @@ void* boggle(void *arg)
 {
     printf("Coucou c'est moi le jeu\n");
     dataServ* myData = (dataServ*) arg;
+    int i;
     int timer;
     int nbSession = 0;
     int nbJoueur = 0;
     int index;
+
+    char* buffer = malloc(sizeof(char) * TAILLEBUFFER);
+    memset(buffer, 0, TAILLEBUFFER);
 
     pthread_mutex_lock(myData->mutex);
     *myData->phaseDeJeu = 0;
@@ -380,6 +383,8 @@ void* boggle(void *arg)
     printf("tirageGrille\n");
     pthread_cond_wait(myData->cond, myData->mutex);
     pthread_mutex_unlock(myData->mutex);
+
+    write(myData->joueurs[0]->sock, "SESSION/\n", sizeof(char) * 9);
 
     clock_t temps;
 
@@ -404,6 +409,13 @@ void* boggle(void *arg)
             {
                 if(recherchePseudo(myData->joueurs, nbJoueur, myData->joueurs[nbJoueur]->pseudo) == 0)
                 {
+                    sprintf(buffer, "CONNECTE/%s/\n", myData->joueurs[nbJoueur]->pseudo);
+
+                    for(i = 0; i < nbJoueur; i++)
+                    {
+                        write(myData->joueurs[i]->sock, buffer, sizeof(char) * 11 + tailleMot(myData->joueurs[nbJoueur]->pseudo));
+                    }
+
                     printf("C'est Bon : %s\n", myData->joueurs[nbJoueur]->pseudo);
                     myData->joueurs[nbJoueur]->valide = 1;
                     pthread_mutex_lock(myData->mutex);
@@ -439,6 +451,11 @@ void* boggle(void *arg)
                 pthread_cond_wait(myData->condTemps, myData->mutex);
                 pthread_mutex_unlock(myData->mutex);
             }
+        }
+
+        for(i = 0; i < nbJoueur; i++)
+        {
+            write(myData->joueurs[i]->sock, "RFIN/\n", sizeof(char) * 6);
         }
 
         pthread_mutex_lock(myData->mutex);
