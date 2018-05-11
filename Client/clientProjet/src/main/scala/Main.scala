@@ -133,10 +133,10 @@ class UI(out: PrintStream, pseudo: String, writer: PrintWriter) extends MainFram
 
                 chatZone.append(pseudo+" : "+input.tail+'\n')
                 writer.write(pseudo+" : "+input.tail+'\n')
-                println(tmp)
                 out.println("PENVOI/"+input.tail+'/'+tmp+'/')
+                writer.write("PENVOI/"+input.tail+'/'+tmp+"/\n")
             }
-            else out.println("ENVOI/"+chatInput.text+'/')
+            else out.println("ENVOI/"+chatInput.text+'/');writer.write("ENVOI/"+chatInput.text+"/\n")
             chatInput.text = ""
         }
         case ButtonClicked(b) =>
@@ -158,6 +158,7 @@ class UI(out: PrintStream, pseudo: String, writer: PrintWriter) extends MainFram
             {
                 dejaUtiliser = Nil
                 out.println("TROUVE/"+b.text+'/'+trajectoire+"/\0")
+                writer.write("TROUVE/"+b.text+'/'+trajectoire+"/\n\0")
                 trajectoire = ""
                 b.text = ""
                 b.repaint
@@ -340,6 +341,7 @@ class UI(out: PrintStream, pseudo: String, writer: PrintWriter) extends MainFram
     override def closeOperation(): Unit =
     {
         out.println("SORT/"+pseudo+"/")
+        writer.write("SORT/"+pseudo+"/\n")
         writer.close
     }
 }
@@ -361,19 +363,22 @@ object MainApp
         var in = new BufferedSource(socket.getInputStream).getLines
         val out = new PrintStream(socket.getOutputStream)
 
+        val writer = new PrintWriter(new File("log.txt"))
+
         out.println("CONNEXION/"+pseudo+"/")
+        writer.write("CONNEXION/"+pseudo+"/\n")
 
         var tmp = in.next
 
         while(tmp == "CONNEXION/BADPSEUDO/")
         {
+            writer.write(tmp+'\n')
             print("Le pseudo que vous avez entrer est deja pris, veuillez en choisir un autre : ")
             pseudo = scala.io.StdIn.readLine()
-            out.println(pseudo)
+            out.println("CONNEXION/"+pseudo+"/")
+            writer.write("CONNEXION/"+pseudo+"/\n")
             tmp = in.next
         }
-
-        val writer = new PrintWriter(new File("log.txt"))
 
         val ui = new UI(out, pseudo, writer)
         ui.visible = true

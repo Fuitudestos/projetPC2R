@@ -161,7 +161,7 @@ int recherchePseudo(dataClient** joueurs, int nbJoueur, char* pseudo)
         }
     }
 
-    return 0;
+    return -1;
 }
 
 void extractPseudo(char* tab)
@@ -407,7 +407,7 @@ void* boggle(void *arg)
 
             while(myData->nbJoueur > nbJoueur && (clock() - temps)/CLOCKS_PER_SEC < 1)
             {
-                if(recherchePseudo(myData->joueurs, nbJoueur, myData->joueurs[nbJoueur]->pseudo) == 0)
+                if(recherchePseudo(myData->joueurs, nbJoueur, myData->joueurs[nbJoueur]->pseudo) == -1)
                 {
                     sprintf(buffer, "CONNECTE/%s/\n", myData->joueurs[nbJoueur]->pseudo);
 
@@ -471,7 +471,7 @@ void* boggle(void *arg)
 
             while(myData->nbJoueur > nbJoueur && (clock() - temps)/CLOCKS_PER_SEC < 1)
             {
-                if(recherchePseudo(myData->joueurs, nbJoueur, myData->joueurs[nbJoueur]->pseudo) == 0)
+                if(recherchePseudo(myData->joueurs, nbJoueur, myData->joueurs[nbJoueur]->pseudo) == -1)
                 {
                     printf("C'est Bon : %s\n", myData->joueurs[nbJoueur]->pseudo);
                     myData->joueurs[nbJoueur]->valide = 1;
