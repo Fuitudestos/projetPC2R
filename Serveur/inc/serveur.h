@@ -54,6 +54,7 @@ struct dataServ
     char* motProposer;
     pthread_cond_t* cond;
     pthread_mutex_t* mutex;
+    pthread_cond_t* condTemps;
 
     int* timer;
     int* phaseDeJeu;

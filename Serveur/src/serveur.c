@@ -204,7 +204,7 @@ char* extractDestinataire(char* tab)
     {
         if(fin == 0 && tab[i] == '/')
         {
-            fin = --i;
+            fin = i;
         }
         else if(debut == 257 && tab[i] == '/')
         {
@@ -373,6 +373,7 @@ void* boggle(void *arg)
     int nbSession = 0;
     int nbJoueur = 0;
     int index;
+
     pthread_mutex_lock(myData->mutex);
     *myData->phaseDeJeu = 0;
     myData->grille = tirageGrille(myData->grille);
@@ -380,13 +381,26 @@ void* boggle(void *arg)
     pthread_cond_wait(myData->cond, myData->mutex);
     pthread_mutex_unlock(myData->mutex);
 
+    clock_t temps;
+
     message* msg;
 
     while(nbSession < myData->nbSession)
     {
+        pthread_mutex_lock(myData->mutex);
+        *myData->phaseDeJeu = 1;
+        pthread_mutex_unlock(myData->mutex);
+
         for(timer = myData->nbMinute * 60; timer >= 0; timer--)
         {
-            while(myData->nbJoueur > nbJoueur)
+            temps = clock();
+
+            pthread_mutex_lock(myData->mutex);
+            *myData->timer = timer;
+            pthread_cond_broadcast(myData->cond);
+            pthread_mutex_unlock(myData->mutex);
+
+            while(myData->nbJoueur > nbJoueur && (clock() - temps)/CLOCKS_PER_SEC < 1)
             {
                 if(recherchePseudo(myData->joueurs, nbJoueur, myData->joueurs[nbJoueur]->pseudo) == 0)
                 {
@@ -407,7 +421,7 @@ void* boggle(void *arg)
             }
 
             msg = defiler(myData->file);
-            while(msg != NULL)
+            while(msg != NULL && (clock() - temps)/CLOCKS_PER_SEC < 1)
             {
                 if(msg->destinataire == NULL) messageBroadcast(msg, myData->joueurs, myData->nbJoueur);
                 else
@@ -419,14 +433,12 @@ void* boggle(void *arg)
                 msg = defiler(myData->file);
             }
 
-            printf("RC : %s\n", myData->joueurs[0]->pseudo);
-
-            pthread_mutex_lock(myData->mutex);
-            *myData->phaseDeJeu = 1;
-            *myData->timer = timer;
-            pthread_cond_broadcast(myData->cond);
-            pthread_mutex_unlock(myData->mutex);
-            sleep(1);
+            if((clock() - temps)/CLOCKS_PER_SEC < 1)
+            {
+                pthread_mutex_lock(myData->mutex);
+                pthread_cond_wait(myData->condTemps, myData->mutex);
+                pthread_mutex_unlock(myData->mutex);
+            }
         }
 
         pthread_mutex_lock(myData->mutex);
@@ -436,7 +448,51 @@ void* boggle(void *arg)
         pthread_cond_broadcast(myData->cond);
         pthread_mutex_unlock(myData->mutex);
 
-        sleep(10);
+        for(timer = 0; timer < 10; timer++)
+        {
+            temps = clock();
+
+            while(myData->nbJoueur > nbJoueur && (clock() - temps)/CLOCKS_PER_SEC < 1)
+            {
+                if(recherchePseudo(myData->joueurs, nbJoueur, myData->joueurs[nbJoueur]->pseudo) == 0)
+                {
+                    printf("C'est Bon : %s\n", myData->joueurs[nbJoueur]->pseudo);
+                    myData->joueurs[nbJoueur]->valide = 1;
+                    pthread_mutex_lock(myData->mutex);
+                    pthread_cond_signal(myData->joueurs[nbJoueur]->condClient);
+                    pthread_mutex_unlock(myData->mutex);
+                    nbJoueur++;
+                }
+                else
+                {
+                    printf("C'est pas Bon !\n");
+                    pthread_mutex_lock(myData->mutex);
+                    pthread_cond_signal(myData->joueurs[nbJoueur]->condClient);
+                    pthread_mutex_unlock(myData->mutex);
+                }
+            }
+
+            msg = defiler(myData->file);
+            while(msg != NULL && (clock() - temps)/CLOCKS_PER_SEC < 1)
+            {
+                if(msg->destinataire == NULL) messageBroadcast(msg, myData->joueurs, myData->nbJoueur);
+                else
+                {
+                    index = recherchePseudo(myData->joueurs, myData->nbJoueur, msg->destinataire);
+                    messagePrive(msg, myData->joueurs[index]->sock);
+                }
+
+                msg = defiler(myData->file);
+            }
+
+            if((clock() - temps)/CLOCKS_PER_SEC < 1)
+            {
+                pthread_mutex_lock(myData->mutex);
+                pthread_cond_wait(myData->condTemps, myData->mutex);
+                pthread_mutex_unlock(myData->mutex);
+            }
+        }
+
         nbSession++;
     }
 
@@ -519,7 +575,7 @@ void* traiteClient(void *arg)
                 memset(source, 0, TAILLEBUFFER);
                 extractPseudo(buffer);
                 memcpy(source, buffer, TAILLEBUFFER);
-                printf("Pseudo : %s, Message : %s\n", myData->pseudo, buffer);
+                printf("1 Pseudo : %s, Message : %s\n", myData->pseudo, buffer);
                 enfiler(myData->file, myData->pseudo, NULL, buffer);
             }
 
@@ -530,6 +586,7 @@ void* traiteClient(void *arg)
                 memset(source, 0, TAILLEBUFFER);
                 extractPseudo(buffer);
                 memcpy(source, buffer, TAILLEBUFFER);
+                printf("1 Pseudo : %s, Message : %s, Destinataire : %s\n", myData->pseudo, buffer, destinataire);
                 enfiler(myData->file, myData->pseudo, destinataire, buffer);
             }
         }
@@ -545,7 +602,7 @@ void* traiteClient(void *arg)
                 memset(source, 0, TAILLEBUFFER);
                 extractPseudo(buffer);
                 memcpy(source, buffer, TAILLEBUFFER);
-                printf("Pseudo : %s, Message : %s\n", myData->pseudo, buffer);
+                printf("0 Pseudo : %s, Message : %s\n", myData->pseudo, buffer);
                 enfiler(myData->file, myData->pseudo, NULL, buffer);
             }
 
@@ -689,6 +746,7 @@ int main(int argc, char * const argv[])
     *size = TAILLEBUFFER;
 
     pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
+    pthread_cond_t condTemps = PTHREAD_COND_INITIALIZER;
     pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
     pthread_t pidB;
@@ -698,6 +756,7 @@ int main(int argc, char * const argv[])
     myData->nbJoueurMax = 10;
     myData->joueurs = joueurs;
     myData->cond = &cond;
+    myData->condTemps = &condTemps;
     myData->mutex = &mutex;
     myData->phaseDeJeu = phaseDeJeu;
     myData->timer = timer;
@@ -716,6 +775,17 @@ int main(int argc, char * const argv[])
     myData->addr = serv;
 
     pthread_create(&pidAC, NULL, accepteClient, myData);
+
+    int i;
+
+    for(i = 0; i < nbSession * nbMinute * 70; i ++)
+    {
+        sleep(1);
+
+        pthread_mutex_lock(&mutex);
+        pthread_cond_signal(&condTemps);
+        pthread_mutex_unlock(&mutex);
+    }
 
     pthread_join(pidB, NULL);
 

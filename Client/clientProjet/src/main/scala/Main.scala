@@ -120,7 +120,22 @@ class UI(out: PrintStream, pseudo: String) extends MainFrame
     {
         case KeyPressed(_, Key.Enter, _, _) =>
         {
-            out.println("ENVOI/"+chatInput.text+'/')
+            if(chatInput.text.contains(":"))
+            {
+                var input = chatInput.text
+                var tmp = ""
+
+                while(input.head != ':')
+                {
+                    tmp = tmp :+ input.head
+                    input = input.tail
+                }
+
+                chatZone.append(pseudo+" : "+input.tail+'\n')
+                println(tmp)
+                out.println("PENVOI/"+input.tail+'/'+tmp+'/')
+            }
+            else out.println("ENVOI/"+chatInput.text+'/')
             chatInput.text = ""
         }
         case ButtonClicked(b) =>
@@ -335,7 +350,6 @@ object MainApp
 
         while(true)
         {
-            println(tmp)
             if(tmp.contains("TOUR/tirage/")) ui.updateGrille(tmp)
             else if(tmp.contains("TOUR/newTime/")) ui.updateTimer(tmp)
             else if(tmp.contains("MVALIDE/")) ui.updateScore(tmp.takeRight(4))
